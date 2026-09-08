@@ -8,7 +8,7 @@ function setStage(panel,title,copy,submit){$('#auth-title').textContent=title;$(
 function renderDatabase(){setStage('database','Choose your database','Choose SQLite, or configure an existing PostgreSQL server. The administrator account is created only after the database is ready.','');syncDbAction()}
 function renderRestart(){setStage('restart','Restart required','PostgreSQL is configured. Restart Web Fleet, then reload this page to create the administrator account.','')}
 function renderAdmin(){setStage('admin','Create the administrator account','This deployment has no administrator yet. Create the account that will administer Web Fleet.','Create administrator')}
-function renderLogin(){setStage('login','Welcome back','Sign in to view your fleet.','')}
+function renderLogin(){setStage('login','','','')}
 function renderBootError(msg){setStage('error','Could not load Web Fleet',msg||'Check that Web Fleet is running and reload.','')}
 function selectedDatabase(){return document.querySelector('input[name="database"]:checked')?.value||'sqlite'}
 function syncDbAction(){const pg=selectedDatabase()==='postgres';$('#postgres-setup').hidden=!pg;const btn=$('#db-action');btn.textContent=pg?'Test and use PostgreSQL':'Continue';btn.disabled=pg&&!($('#postgres-url').value.trim())}
