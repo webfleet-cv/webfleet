@@ -28,6 +28,7 @@ var knownActions = map[string]bool{
 	"analytics.read": true, "analytics.manage": true,
 	"incidents.read": true, "incidents.acknowledge": true,
 	"deployments.read": true, "deployments.record": true,
+	"launcher.configure.all": true,
 	"session": true,
 }
 

@@ -39,7 +39,7 @@ import (
 	"github.com/webfleet-cv/webfleet/internal/tlshealth"
 )
 
-//go:embed web/* web/assets/css/* web/assets/js/*
+//go:embed web/* web/assets/css/* web/assets/js/* web/assets/images/*
 var embedded embed.FS
 
 // principal is the resolved caller identity carried into authenticated
@@ -91,6 +91,8 @@ var apiRouteDefs = []routeDef{
 	{"PUT", "/api/oidc/config", "organization.update", true, func(s *Server) handler { return s.handleOIDCConfigSave }, nil},
 	{"POST", "/api/logout", "session", true, func(s *Server) handler { return s.handleLogout }, nil},
 	{"GET", "/api/session", "session", false, func(s *Server) handler { return s.handleSession }, nil},
+	{"GET", "/api/launcher/instances", "", false, func(s *Server) handler { return s.handleLauncherInstances }, nil},
+	{"PUT", "/api/launcher/config", "launcher.configure.all", true, func(s *Server) handler { return s.handleLauncherConfig }, nil},
 	{"POST", "/api/me/password", "session", true, func(s *Server) handler { return s.handleChangePassword }, nil},
 	{"POST", "/api/tokens", "tokens.manage", true, func(s *Server) handler { return s.handleCreateToken }, nil},
 	{"DELETE", "/api/tokens/{id}", "tokens.manage", true, func(s *Server) handler { return s.handleRevokeToken }, nil},
@@ -235,7 +237,15 @@ func (s *Server) routes() {
 		}
 	}
 	sub, _ := fs.Sub(embedded, "web")
-	s.mux.Handle("/", http.FileServer(http.FS(sub)))
+	static := http.FileServer(http.FS(sub))
+	s.mux.Handle("/assets/", static)
+	s.mux.Handle("/launcher.css", static)
+	s.mux.Handle("/launcher.js", static)
+	s.mux.HandleFunc("/app", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/app/", http.StatusPermanentRedirect)
+	})
+	s.mux.Handle("/app/", http.StripPrefix("/app", static))
+	s.mux.Handle("/", s.launcherRoot(static))
 }
 
 // authorize resolves the caller for an authenticated request. A session cookie

@@ -3,6 +3,7 @@ module github.com/webfleet-cv/webfleet
 go 1.23
 
 require (
+	github.com/gantry-tools/gantry-core v0.0.0-20260910181033-2466b258bc8c
 	github.com/chromedp/cdproto v0.0.0-20240202021202-6d0b6a386732
 	github.com/chromedp/chromedp v0.9.5
 	github.com/coreos/go-oidc/v3 v3.11.0

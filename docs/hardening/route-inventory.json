@@ -36,9 +36,26 @@
     "incidents.acknowledge",
     "deployments.read",
     "deployments.record",
-    "session"
+    "session",
+    "launcher.configure.all"
   ],
   "routes": [
+    {
+      "method": "GET",
+      "path": "/api/launcher/instances",
+      "action": null,
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/launcher/config",
+      "action": "launcher.configure.all",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
     {
       "method": "GET",
       "path": "/healthz",
