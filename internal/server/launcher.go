@@ -16,21 +16,6 @@ func (s *Server) launcherRoot(static http.Handler) http.Handler {
 			return
 		}
 		if r.URL.Query().Has("config") {
-			cookie, err := r.Cookie("webfleet_session")
-			if err != nil {
-				http.Redirect(w, r, "/app/?return=%2F%3Fconfig", 302)
-				return
-			}
-			sess, err := s.auth.Session(cookie.Value)
-			if err != nil {
-				http.Redirect(w, r, "/app/?return=%2F%3Fconfig", 302)
-				return
-			}
-			membership, err := s.rbac.Resolve(sess.UserID)
-			if err != nil || !rbacLauncherManage(membership.Role) {
-				http.Error(w, "forbidden", 403)
-				return
-			}
 			s.serveLauncher(static, w, r)
 			return
 		}
