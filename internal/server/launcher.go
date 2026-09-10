@@ -18,17 +18,17 @@ func (s *Server) launcherRoot(static http.Handler) http.Handler {
 		if r.URL.Query().Has("config") {
 			cookie, err := r.Cookie("webfleet_session")
 			if err != nil {
-				corelauncher.WriteAccessError(w, http.StatusUnauthorized, "Web Fleet", "WF")
+				corelauncher.WriteAccessError(w, http.StatusUnauthorized, "Web Fleet", "WF", "#94d36f")
 				return
 			}
 			session, err := s.auth.Session(cookie.Value)
 			if err != nil {
-				corelauncher.WriteAccessError(w, http.StatusUnauthorized, "Web Fleet", "WF")
+				corelauncher.WriteAccessError(w, http.StatusUnauthorized, "Web Fleet", "WF", "#94d36f")
 				return
 			}
 			membership, err := s.rbac.Resolve(session.UserID)
 			if err != nil || !rbacLauncherManage(membership.Role) {
-				corelauncher.WriteAccessError(w, http.StatusForbidden, "Web Fleet", "WF")
+				corelauncher.WriteAccessError(w, http.StatusForbidden, "Web Fleet", "WF", "#94d36f")
 				return
 			}
 			s.serveLauncher(static, w, r)
