@@ -29,7 +29,7 @@ var knownActions = map[string]bool{
 	"incidents.read": true, "incidents.acknowledge": true,
 	"deployments.read": true, "deployments.record": true,
 	"launcher.configure.all": true,
-	"session": true,
+	"session":                true,
 }
 
 // knownTokenScopes is the documented API-token scope vocabulary. A route may

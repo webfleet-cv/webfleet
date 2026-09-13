@@ -269,7 +269,7 @@ Continue development from the current state; the route/permission inventory at
 enforced by the route-inventory contract test.
 ## Current release state
 
-- Released stable: **v0.1.0** (stable public preview).
+- Released stable: **v0.1.1** (stable public preview).
 - Current development: **0.1.1** on `main`. An ordinary development build
   reports 0.1.1 with commit `unknown`; release builds override the default via
   `-ldflags -X main.version` and are never confused with the released version.
