@@ -6,11 +6,14 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"strconv"
+	"strings"
+	"time"
+
+	coreauth "github.com/gantry-tools/gantry-core/auth"
 	"github.com/webfleet-cv/webfleet/internal/password"
 	"github.com/webfleet-cv/webfleet/internal/sqlite"
 	"github.com/webfleet-cv/webfleet/internal/store"
-	"strings"
-	"time"
 )
 
 const MinPasswordLength = 7
@@ -20,17 +23,22 @@ type Session struct {
 	Email, CSRF string
 	Expires     time.Time
 }
-type Service struct{ store *store.Store }
+type Service struct {
+	store    *store.Store
+	accounts *coreauth.Model
+}
 
 var ErrInvalidCurrentPassword = errors.New("current password is incorrect")
 
-func New(s *store.Store) *Service { return &Service{store: s} }
-func (a *Service) NeedsSetup() (bool, error) {
-	r, e := sqlite.Query(a.store.DB, `SELECT COUNT(*) n FROM users`)
-	if e != nil {
-		return false, e
+func New(s *store.Store) *Service {
+	accounts, err := coreauth.NewModel(accountPersistence{store: s}, webfleetAccountPolicy())
+	if err != nil {
+		panic(err)
 	}
-	return r[0]["n"].Int64 == 0, nil
+	return &Service{store: s, accounts: accounts}
+}
+func (a *Service) NeedsSetup() (bool, error) {
+	return a.accounts.Empty(), nil
 }
 func (a *Service) CreateAdmin(email, pw string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
@@ -87,27 +95,34 @@ func (a *Service) CreateAdmin(email, pw string) error {
 	if e = tx.Commit(); e != nil {
 		return e
 	}
+	if e = a.accounts.Reload(); e != nil {
+		return e
+	}
 	return a.audit("first_admin_created", email)
 }
 func (a *Service) Login(email, pw string) (string, Session, error) {
-	r, e := sqlite.Query(a.store.DB, `SELECT id,email,password_hash FROM users WHERE email=? LIMIT 1`, strings.TrimSpace(strings.ToLower(email)))
-	if e != nil || len(r) == 0 {
+	account, _, valid := a.accounts.AuthenticatePassword(email, pw)
+	if !valid {
 		return "", Session{}, errors.New("invalid credentials")
 	}
-	if !password.Verify(r[0]["password_hash"].Text, pw) {
-		return "", Session{}, errors.New("invalid credentials")
+	userID, e := strconv.ParseInt(account.ID, 10, 64)
+	if e != nil {
+		return "", Session{}, e
 	}
 	raw := token(32)
 	csrf := token(24)
 	sum := sha256.Sum256([]byte(raw))
 	exp := time.Now().UTC().Add(24 * time.Hour)
-	if e = sqlite.Exec(a.store.DB, `INSERT INTO sessions(token_hash,user_id,csrf_token,expires_at,created_at) VALUES(?,?,?,?,?)`, sum[:], r[0]["id"].Int64, csrf, exp.Format(time.RFC3339Nano), store.Now()); e != nil {
+	if e = sqlite.Exec(a.store.DB, `INSERT INTO sessions(token_hash,user_id,csrf_token,expires_at,created_at) VALUES(?,?,?,?,?)`, sum[:], userID, csrf, exp.Format(time.RFC3339Nano), store.Now()); e != nil {
 		return "", Session{}, e
 	}
-	_ = a.audit("login", r[0]["email"].Text)
-	return raw, Session{UserID: r[0]["id"].Int64, Email: r[0]["email"].Text, CSRF: csrf, Expires: exp}, nil
+	_ = a.audit("login", account.DisplayName)
+	return raw, Session{UserID: userID, Email: account.DisplayName, CSRF: csrf, Expires: exp}, nil
 }
 func (a *Service) CreateSessionForUser(userID int64, email string) (string, Session, error) {
+	if err := a.accounts.Reload(); err != nil {
+		return "", Session{}, err
+	}
 	raw := token(32)
 	csrf := token(24)
 	sum := sha256.Sum256([]byte(raw))
@@ -171,7 +186,10 @@ func (a *Service) ChangePassword(ctx context.Context, userID int64, currentPassw
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_events(kind,detail,created_at) VALUES(?,?,?)`, "password_changed", "self-service password change", store.Now()); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	return a.accounts.Reload()
 }
 func (a *Service) audit(kind, detail string) error {
 	return sqlite.Exec(a.store.DB, `INSERT INTO audit_events(kind,detail,created_at) VALUES(?,?,?)`, kind, detail, store.Now())
