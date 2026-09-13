@@ -501,10 +501,10 @@ func assetClassByContentType(ct string) string {
 }
 
 // isTemplateLiteral detects documentation code-sample hrefs such as
-// href="$[item.url]" or @pathto(...) that resolve to real path strings but are
+// href="$[item.url]" or @path(...) that resolve to real path strings but are
 // not actual links on the site.
 func isTemplateLiteral(raw string) bool {
-	return strings.ContainsAny(raw, " \t") || strings.Contains(raw, "$[") || strings.Contains(raw, "@pathto(") || strings.Contains(raw, "{{") || strings.Contains(raw, "{%")
+	return strings.ContainsAny(raw, " \t") || strings.Contains(raw, "$[") || strings.Contains(raw, "@path(") || strings.Contains(raw, "{{") || strings.Contains(raw, "{%")
 }
 
 func disallowed(rules []string, path string) bool {

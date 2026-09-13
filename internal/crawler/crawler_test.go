@@ -259,7 +259,7 @@ func TestCrawlExcludesAssetsAndTemplateLiterals(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, `<a href="/style.css">css</a><a href="/asset.zip">zip</a><a href="/real">real</a><a href="$[item.url]">literal</a><a href="/docs/@pathto(">literal2</a>`)
+		fmt.Fprintf(w, `<a href="/style.css">css</a><a href="/asset.zip">zip</a><a href="/real">real</a><a href="$[item.url]">literal</a><a href="/docs/@path(">literal2</a>`)
 	})
 	mux.HandleFunc("/style.css", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/css")
@@ -288,7 +288,7 @@ func TestCrawlExcludesAssetsAndTemplateLiterals(t *testing.T) {
 		t.Fatal(e)
 	}
 	for _, p := range d.Pages {
-		for _, bad := range []string{"/style.css", "/asset.zip", "$[", "@pathto("} {
+		for _, bad := range []string{"/style.css", "/asset.zip", "$[", "@path("} {
 			if strings.Contains(p.URL, bad) {
 				t.Fatalf("asset/template-literal URL counted as a page: %s", p.URL)
 			}

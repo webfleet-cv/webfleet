@@ -29,3 +29,7 @@ The legacy single-address `WEBFLEET_LISTEN` environment variable and the `servic
 `webfleet service install` records the canonical listener in the generated unit so it survives restart/reboot: a new `--host`/`--port` install writes the pair into `ExecStart` (e.g. `webfleet service install --host 127.0.0.1 --port 7336`), while legacy bootstrap units (WEBFLEET_LISTEN environment or `--listen`) keep the recorded `WEBFLEET_LISTEN` environment. The managed unit records a `# webfleet-listen-mode: explicit|bootstrap` marker (old units default to bootstrap), and `service status`/its health check use the installed process's effective listener.
 
 Running on `0.0.0.0` exposes the backend directly; prefer the loopback default behind a trusted reverse proxy (see the Web Fleet website's reverse-proxy docs).
+
+## Headless administration
+
+Use `webfleet setup --email-file FILE --password-file FILE`, `webfleet config show --json`, and backup, restore and service commands from provisioning agents. Stop the service before `webfleet reset --auth` or `webfleet reset --all`; confirmation is `WEBFLEET AUTH` or `WEBFLEET ALL`. SQLite resets retain timestamped backups. PostgreSQL resets fail closed and require a database-native backup/reset workflow.
