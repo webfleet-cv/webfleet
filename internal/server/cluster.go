@@ -3,14 +3,99 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	core "github.com/gantry-tools/gantry-core/cluster"
 	clusterapi "github.com/webfleet-cv/webfleet/internal/cluster"
 )
 
-type clusterPairInput struct {
-	Token    string        `json:"token"`
-	Identity core.Identity `json:"identity"`
+func (s *Server) handleClusterJoin(w http.ResponseWriter, r *http.Request) {
+	var in clusterapi.JoinSubmission
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, core.MaxRequestBytes)).Decode(&in); err != nil {
+		writeError(w, 400, "invalid cluster join request")
+		return
+	}
+	v, err := s.cluster.SubmitJoin(r.Context(), in)
+	if err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, v)
+}
+func (s *Server) handleClusterPollJoin(w http.ResponseWriter, r *http.Request) {
+	secret := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	v, err := s.cluster.PollJoin(r.Context(), r.PathValue("id"), secret)
+	if err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 200, v)
+}
+func (s *Server) handleClusterPendingJoins(w http.ResponseWriter, r *http.Request, _ principal) {
+	v, err := s.cluster.PendingJoins(r.Context())
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, v)
+}
+func (s *Server) handleClusterJoinAction(w http.ResponseWriter, r *http.Request, p principal) {
+	action := r.PathValue("action")
+	if action != "approve" && action != "reject" {
+		writeError(w, 404, "unknown cluster join action")
+		return
+	}
+	if err := s.cluster.DecideJoin(r.Context(), r.PathValue("id"), action == "approve"); err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	auditAction := core.AuditJoinReject
+	if action == "approve" {
+		auditAction = core.AuditJoinApprove
+	}
+	if err := s.cluster.Audit(r.Context(), p.UserID, p.OrgID, auditAction, r.PathValue("id"), r.Header.Get("X-Request-ID")); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, map[string]bool{"ok": true})
+}
+
+func (s *Server) handleClusterBeginOutbound(w http.ResponseWriter, r *http.Request, p principal) {
+	var in struct {
+		URL   string `json:"url"`
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, core.MaxRequestBytes)).Decode(&in); err != nil {
+		writeError(w, 400, "invalid outbound join")
+		return
+	}
+	v, err := s.cluster.BeginOutbound(r.Context(), in.URL, in.Token, nil)
+	if err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	if err := s.cluster.Audit(r.Context(), p.UserID, p.OrgID, "cluster.join.begin", v.ID, r.Header.Get("X-Request-ID")); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 202, v)
+}
+
+func (s *Server) handleClusterOutbound(w http.ResponseWriter, r *http.Request, _ principal) {
+	v, err := s.cluster.ListOutbound(r.Context())
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, v)
+}
+func (s *Server) handleClusterCollectOutbound(w http.ResponseWriter, r *http.Request, _ principal) {
+	v, err := s.cluster.CollectOutbound(r.Context(), r.PathValue("id"), nil)
+	if err != nil {
+		writeError(w, 400, err.Error())
+		return
+	}
+	writeJSON(w, 200, v)
 }
 
 func (s *Server) handleClusterIdentity(w http.ResponseWriter, r *http.Request, _ principal) {
@@ -19,7 +104,7 @@ func (s *Server) handleClusterIdentity(w http.ResponseWriter, r *http.Request, _
 		writeError(w, 500, err.Error())
 		return
 	}
-	writeJSON(w, 200, v)
+	writeJSON(w, 200, map[string]any{"identity": v, "fingerprint": v.Fingerprint()})
 }
 func (s *Server) handleClusterMembers(w http.ResponseWriter, r *http.Request, _ principal) {
 	v, err := s.cluster.Members(r.Context())
@@ -29,28 +114,20 @@ func (s *Server) handleClusterMembers(w http.ResponseWriter, r *http.Request, _ 
 	}
 	writeJSON(w, 200, v)
 }
-func (s *Server) handleClusterInvite(w http.ResponseWriter, r *http.Request, _ principal) {
+func (s *Server) handleClusterInvite(w http.ResponseWriter, r *http.Request, p principal) {
 	inv, token, err := s.cluster.Invite(r.Context())
 	if err != nil {
 		writeError(w, 500, err.Error())
 		return
 	}
-	writeJSON(w, 201, map[string]any{"invitation": inv, "token": token})
-}
-func (s *Server) handleClusterPair(w http.ResponseWriter, r *http.Request, _ principal) {
-	var in clusterPairInput
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, core.MaxRequestBytes)).Decode(&in); err != nil {
-		writeError(w, 400, "invalid cluster pairing request")
+	if err := s.cluster.Audit(r.Context(), p.UserID, p.OrgID, core.AuditInviteCreate, inv.ID, r.Header.Get("X-Request-ID")); err != nil {
+		writeError(w, 500, err.Error())
 		return
 	}
-	v, err := s.cluster.Pair(r.Context(), in.Token, in.Identity)
-	if err != nil {
-		writeError(w, 400, err.Error())
-		return
-	}
-	writeJSON(w, 201, v)
+	inv.Token = token
+	writeJSON(w, 201, inv)
 }
-func (s *Server) handleClusterMemberAction(w http.ResponseWriter, r *http.Request, _ principal) {
+func (s *Server) handleClusterMemberAction(w http.ResponseWriter, r *http.Request, p principal) {
 	id := r.PathValue("id")
 	var err error
 	var value any = map[string]bool{"ok": true}
@@ -75,8 +152,23 @@ func (s *Server) handleClusterMemberAction(w http.ResponseWriter, r *http.Reques
 		writeError(w, 400, err.Error())
 		return
 	}
+	auditAction := map[string]string{"enable": core.AuditMemberEnable, "disable": core.AuditMemberDisable, "rotate": core.AuditMemberRotate, "revoke": core.AuditMemberRevoke, "remove": core.AuditMemberRemove}[r.PathValue("action")]
+	if err := s.cluster.Audit(r.Context(), p.UserID, p.OrgID, auditAction, id, r.Header.Get("X-Request-ID")); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
 	writeJSON(w, 200, value)
 }
+
+func (s *Server) handleClusterAudit(w http.ResponseWriter, r *http.Request, _ principal) {
+	v, err := s.cluster.RecentAudit(r.Context(), 25)
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, v)
+}
+
 func (s *Server) handleClusterStatus(w http.ResponseWriter, r *http.Request, _ principal) {
 	local, err := s.cluster.LocalSummary(r.Context())
 	if err != nil {

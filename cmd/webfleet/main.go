@@ -36,6 +36,9 @@ func main() {
 	if len(os.Args) >= 2 && os.Args[1] == "service" {
 		os.Exit(runService(os.Args[2:]))
 	}
+	if len(os.Args) >= 2 && os.Args[1] == "cluster" {
+		os.Exit(runCluster(os.Args[2:]))
+	}
 	if len(os.Args) >= 2 && os.Args[1] == "reset" {
 		os.Exit(runReset(os.Args[2:]))
 	}

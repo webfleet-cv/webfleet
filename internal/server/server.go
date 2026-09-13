@@ -97,9 +97,14 @@ var apiRouteDefs = []routeDef{
 	{"GET", "/api/cluster/v1/identity", "organization.read", false, func(s *Server) handler { return s.handleClusterIdentity }, nil},
 	{"GET", "/api/cluster/v1/members", "organization.read", false, func(s *Server) handler { return s.handleClusterMembers }, nil},
 	{"POST", "/api/cluster/v1/invitations", "membership.update", true, func(s *Server) handler { return s.handleClusterInvite }, nil},
-	{"POST", "/api/cluster/v1/pair", "membership.update", true, func(s *Server) handler { return s.handleClusterPair }, nil},
+	{"GET", "/api/cluster/v1/joins", "organization.read", false, func(s *Server) handler { return s.handleClusterPendingJoins }, nil},
+	{"POST", "/api/cluster/v1/joins/{id}/{action}", "membership.update", true, func(s *Server) handler { return s.handleClusterJoinAction }, nil},
+	{"GET", "/api/cluster/v1/outbound", "organization.read", false, func(s *Server) handler { return s.handleClusterOutbound }, nil},
+	{"POST", "/api/cluster/v1/outbound", "membership.update", true, func(s *Server) handler { return s.handleClusterBeginOutbound }, nil},
+	{"POST", "/api/cluster/v1/outbound/{id}/collect", "membership.update", true, func(s *Server) handler { return s.handleClusterCollectOutbound }, nil},
 	{"POST", "/api/cluster/v1/members/{id}/{action}", "membership.update", true, func(s *Server) handler { return s.handleClusterMemberAction }, nil},
 	{"GET", "/api/cluster/v1/status", "organization.read", false, func(s *Server) handler { return s.handleClusterStatus }, nil},
+	{"GET", "/api/cluster/v1/audit", "organization.read", false, func(s *Server) handler { return s.handleClusterAudit }, nil},
 	{"GET", "/api/cluster/v1/compare", "organization.read", false, func(s *Server) handler { return s.handleClusterCompare }, nil},
 	{"POST", "/api/me/password", "session", true, func(s *Server) handler { return s.handleChangePassword }, nil},
 	{"POST", "/api/tokens", "tokens.manage", true, func(s *Server) handler { return s.handleCreateToken }, nil},
@@ -239,6 +244,8 @@ func NewAnalyticsIngest(cfg config.Config, st *store.Store, log *slog.Logger) *S
 // posture here; adding a handler without a permission is a table change that
 // the route-inventory contract test will reject.
 func (s *Server) routes() {
+	s.mux.HandleFunc("POST /api/cluster/v1/join", s.handleClusterJoin)
+	s.mux.HandleFunc("GET /api/cluster/v1/join/{id}", s.handleClusterPollJoin)
 	s.mux.HandleFunc("GET /api/cluster/v1/rpc/summary", s.handleClusterRPCSummary)
 	s.mux.HandleFunc("GET /api/cluster/v1/rpc/compare", s.handleClusterRPCCompare)
 	for _, def := range apiRouteDefs {

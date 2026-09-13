@@ -21,7 +21,7 @@ type Store struct {
 	path string
 }
 
-const schemaVersion = 33
+const schemaVersion = 34
 
 type migration struct {
 	version int
@@ -196,6 +196,10 @@ var migrations = []migration{
 		`CREATE TABLE cluster_invitations(id TEXT PRIMARY KEY, token_hash BLOB NOT NULL UNIQUE, state TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT);`,
 		`CREATE TABLE cluster_nonces(node_id TEXT NOT NULL REFERENCES cluster_members(node_id) ON DELETE CASCADE, nonce TEXT NOT NULL, seen_at TEXT NOT NULL, PRIMARY KEY(node_id,nonce));`,
 		`CREATE INDEX cluster_nonces_seen ON cluster_nonces(seen_at);`,
+	}},
+	{34, "cluster pairing lifecycle", []string{
+		`CREATE TABLE cluster_join_requests(id TEXT PRIMARY KEY, request_secret_hash BLOB NOT NULL UNIQUE, invitation_id TEXT NOT NULL REFERENCES cluster_invitations(id), node_id TEXT NOT NULL, installation_id TEXT NOT NULL, display_name TEXT NOT NULL DEFAULT '', public_endpoint TEXT NOT NULL, public_key BLOB NOT NULL, capabilities_json TEXT NOT NULL DEFAULT '[]', protocol_version INTEGER NOT NULL, product_version TEXT NOT NULL DEFAULT '', credential_for_local TEXT NOT NULL, state TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL, decided_at TEXT, response_consumed_at TEXT);`,
+		`CREATE TABLE cluster_outbound_joins(id TEXT PRIMARY KEY, remote_url TEXT NOT NULL, request_id TEXT NOT NULL, request_secret TEXT NOT NULL, local_inbound_credential TEXT NOT NULL, state TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_error TEXT NOT NULL DEFAULT '');`,
 	}},
 }
 
