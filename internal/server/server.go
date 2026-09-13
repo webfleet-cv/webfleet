@@ -241,10 +241,20 @@ func (s *Server) routes() {
 	s.mux.Handle("/assets/", static)
 	s.mux.Handle("/launcher.css", static)
 	s.mux.Handle("/launcher.js", static)
+	s.mux.Handle("/manage.css", static)
+	s.mux.Handle("/manage.js", static)
 	s.mux.HandleFunc("/app", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/app/", http.StatusPermanentRedirect)
 	})
 	s.mux.Handle("/app/", http.StripPrefix("/app", static))
+	s.mux.HandleFunc("/manage", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/manage/", http.StatusPermanentRedirect)
+	})
+	s.mux.HandleFunc("GET /manage/", s.authorize("membership.update", false, nil, func(w http.ResponseWriter, r *http.Request, _ principal) {
+		clone := r.Clone(r.Context())
+		clone.URL.Path = "/manage.html"
+		static.ServeHTTP(w, clone)
+	}))
 	s.mux.Handle("/", s.launcherRoot(static))
 }
 
