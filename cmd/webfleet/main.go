@@ -28,7 +28,7 @@ import (
 )
 
 // version is overridden at release build time via -ldflags -X main.version.
-var version = "0.1.1"
+var version = "0.1.2"
 
 func main() {
 	// Service-management commands must remain usable even when the application
