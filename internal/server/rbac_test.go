@@ -237,7 +237,10 @@ func TestRBACAdminOperational(t *testing.T) {
 	if rr := doReq(t, s, a, "PUT", "/api/maintenance", `{"check_days":30,"analytics_raw_days":14,"audit_days":90}`); rr.Code != 200 {
 		t.Fatalf("admin maintenance.manage %d", rr.Code)
 	}
-	if rr := doReq(t, s, a, "POST", "/api/notifications/webhooks", `{"name":"hook","url":"https://example.com/hook"}`); rr.Code != 201 {
+	// A literal public documentation address keeps this RBAC test independent
+	// of the runner's DNS and outbound-network policy; netguard behavior has its
+	// own resolver-injected adversarial suite.
+	if rr := doReq(t, s, a, "POST", "/api/notifications/webhooks", `{"name":"hook","url":"https://8.8.8.8/hook"}`); rr.Code != 201 {
 		t.Fatalf("admin webhooks.manage %d %s", rr.Code, rr.Body.String())
 	}
 	// Admin can update a membership that an operator cannot.
