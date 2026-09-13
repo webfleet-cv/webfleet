@@ -13,6 +13,7 @@ const accountSchemaVersion = 1
 
 var webfleetRoles = coreauth.RolesFile{Version: accountSchemaVersion, Roles: []coreauth.Role{
 	{ID: "administrator", Name: "Administrator", Capabilities: []string{"*"}, BuiltIn: true},
+	{ID: "operator", Name: "Operator", Capabilities: []string{"organizations.use"}, BuiltIn: true},
 	{ID: "user", Name: "User", Capabilities: []string{"organizations.use"}, BuiltIn: true},
 	{ID: "viewer", Name: "Viewer", Capabilities: []string{"organizations.read"}, BuiltIn: true},
 }}

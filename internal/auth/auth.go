@@ -38,6 +38,9 @@ func New(s *store.Store) *Service {
 	return &Service{store: s, accounts: accounts}
 }
 func (a *Service) NeedsSetup() (bool, error) {
+	if err := a.accounts.Reload(); err != nil {
+		return false, err
+	}
 	return a.accounts.Empty(), nil
 }
 func (a *Service) CreateAdmin(email, pw string) error {
@@ -101,6 +104,9 @@ func (a *Service) CreateAdmin(email, pw string) error {
 	return a.audit("first_admin_created", email)
 }
 func (a *Service) Login(email, pw string) (string, Session, error) {
+	if err := a.accounts.Reload(); err != nil {
+		return "", Session{}, err
+	}
 	account, _, valid := a.accounts.AuthenticatePassword(email, pw)
 	if !valid {
 		return "", Session{}, errors.New("invalid credentials")

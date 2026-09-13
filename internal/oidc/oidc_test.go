@@ -227,6 +227,9 @@ func newOIDCService(t *testing.T, fp *fakeProvider, auto, enabled bool) (*Servic
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { _ = st.Close() })
+	if e = auth.New(st).CreateAdmin("admin@example.test", "secret7"); e != nil {
+		t.Fatal(e)
+	}
 	svc := New(st, auth.New(st))
 	// Trust the fake provider's TLS certificate for tests.
 	svc.client = fp.srv.Client()
@@ -388,21 +391,18 @@ func TestOIDCUserinfoFallbackUnverifiedRejected(t *testing.T) {
 }
 
 func TestOIDCAutoProvisionDisabledAndAccountLinking(t *testing.T) {
-	fp := newFake(t, "existing@example.com", true)
+	fp := newFake(t, "admin@example.test", true)
 	defer fp.Close()
-	svc, st := newOIDCService(t, fp, false, true)
+	svc, _ := newOIDCService(t, fp, false, true)
 	// A pre-existing user with a password can sign in through OIDC without
 	// auto-provisioning, linking the verified email to the existing account.
-	if e := auth.New(st).CreateAdmin("existing@example.com", "secret7"); e != nil {
-		t.Fatal(e)
-	}
 	state, nonce := beginStateNonce(t, svc)
 	fp.setNonce(nonce)
 	tok, sess, e := svc.Callback(context.Background(), state, "code", testRedirect, testBrowser)
 	if e != nil {
 		t.Fatal(e)
 	}
-	if tok == "" || sess.Email != "existing@example.com" {
+	if tok == "" || sess.Email != "admin@example.test" {
 		t.Fatalf("linked session %+v", sess)
 	}
 	// A brand-new email with auto-provision off is rejected.
