@@ -1,0 +1,1388 @@
+{
+  "schema_version": 1,
+  "project": "webfleet",
+  "operations": [
+    {
+      "operation": "webfleet.analytics.geo.update.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/analytics/geo/update",
+      "cli": "analytics-geo-update create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.manage",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.analytics.geo.update.create.request.v1",
+      "output_schema": "webfleet.analytics.geo.update.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.api.analytics.event.post",
+      "website": false,
+      "method": "POST",
+      "route": "/api/analytics/event",
+      "cli_observed": false,
+      "boundary": "public",
+      "input_schema": "webfleet.api.analytics.event.post.request.v1",
+      "output_schema": "webfleet.api.analytics.event.post.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.api.oidc.callback.get",
+      "website": false,
+      "method": "GET",
+      "route": "/api/oidc/callback",
+      "cli_observed": false,
+      "boundary": "public",
+      "output_schema": "webfleet.api.oidc.callback.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.api.oidc.login.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/oidc/login",
+      "cli_observed": false,
+      "boundary": "public",
+      "output_schema": "webfleet.api.oidc.login.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.audits.batch.batch",
+      "website": true,
+      "method": "POST",
+      "route": "/api/audits/batch",
+      "cli": "audits-batch batch",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "audit.run",
+      "token_scopes": [
+        "audit:run"
+      ],
+      "input_schema": "webfleet.audits.batch.batch.request.v1",
+      "output_schema": "webfleet.audits.batch.batch.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.audits.resolve.resolve",
+      "website": true,
+      "method": "POST",
+      "route": "/api/audits/resolve",
+      "cli": "audits-resolve resolve",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "audit.read",
+      "token_scopes": [
+        "audit:run"
+      ],
+      "input_schema": "webfleet.audits.resolve.resolve.request.v1",
+      "output_schema": "webfleet.audits.resolve.resolve.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.audit.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/audit",
+      "cli": "cluster-audit get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.cluster.audit.get.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.compare.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/compare",
+      "cli": "cluster-compare get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.cluster.compare.get.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.identity.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/identity",
+      "cli": "cluster-identity get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.cluster.identity.get.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.invitations.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/cluster/v1/invitations",
+      "cli": "cluster-invitations create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.cluster.invitations.create.request.v1",
+      "output_schema": "webfleet.cluster.invitations.create.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.joins.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/cluster/v1/joins/{id}/{action}",
+      "cli": "cluster-joins create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.cluster.joins.create.request.v1",
+      "output_schema": "webfleet.cluster.joins.create.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.joins.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/joins",
+      "cli": "cluster-joins list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.cluster.joins.list.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.members.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/cluster/v1/members/{id}/{action}",
+      "cli": "cluster-members create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.cluster.members.create.request.v1",
+      "output_schema": "webfleet.cluster.members.create.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.members.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/members",
+      "cli": "cluster-members list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.cluster.members.list.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.outbound.collect.collect",
+      "website": true,
+      "method": "POST",
+      "route": "/api/cluster/v1/outbound/{id}/collect",
+      "cli": "cluster-outbound-collect collect",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.cluster.outbound.collect.collect.request.v1",
+      "output_schema": "webfleet.cluster.outbound.collect.collect.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.outbound.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/cluster/v1/outbound",
+      "cli": "cluster-outbound create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.cluster.outbound.create.request.v1",
+      "output_schema": "webfleet.cluster.outbound.create.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.outbound.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/outbound",
+      "cli": "cluster-outbound list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.cluster.outbound.list.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.status.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/status",
+      "cli": "cluster-status get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.cluster.status.get.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.fleet.analytics.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/fleet/analytics",
+      "cli": "fleet-analytics list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.read",
+      "token_scopes": [
+        "analytics:read"
+      ],
+      "output_schema": "webfleet.fleet.analytics.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.fleet.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/fleet",
+      "cli": "fleet get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "fleet.read",
+      "token_scopes": [
+        "fleet:read"
+      ],
+      "output_schema": "webfleet.fleet.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.fleet.link.regressions.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/fleet/link-regressions",
+      "cli": "fleet-link-regressions list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "crawl.read",
+      "token_scopes": [
+        "fleet:read"
+      ],
+      "output_schema": "webfleet.fleet.link.regressions.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.fleet.tls.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/fleet/tls",
+      "cli": "fleet-tls list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "tls.read",
+      "token_scopes": [
+        "fleet:read"
+      ],
+      "output_schema": "webfleet.fleet.tls.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.groups.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/groups",
+      "cli": "groups create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.create",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.groups.create.request.v1",
+      "output_schema": "webfleet.groups.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.groups.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/groups",
+      "cli": "groups list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.groups.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.healthz.get",
+      "website": true,
+      "method": "GET",
+      "route": "/healthz",
+      "cli": "healthz get",
+      "cli_observed": true,
+      "boundary": "public",
+      "output_schema": "webfleet.healthz.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.incidents.ack.ack",
+      "website": true,
+      "method": "POST",
+      "route": "/api/incidents/{id}/ack",
+      "cli": "incidents-ack ack",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "incidents.acknowledge",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.incidents.ack.ack.request.v1",
+      "output_schema": "webfleet.incidents.ack.ack.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.launcher.config.update",
+      "website": true,
+      "method": "PUT",
+      "route": "/api/launcher/config",
+      "cli": "launcher-config update",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "launcher.configure.all",
+      "input_schema": "webfleet.launcher.config.update.request.v1",
+      "output_schema": "webfleet.launcher.config.update.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.launcher.instances.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/launcher/instances",
+      "cli": "launcher-instances list",
+      "cli_observed": true,
+      "boundary": "public",
+      "output_schema": "webfleet.launcher.instances.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.login.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/login",
+      "cli": "login create",
+      "cli_observed": true,
+      "boundary": "public",
+      "input_schema": "webfleet.login.create.request.v1",
+      "output_schema": "webfleet.login.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.logout.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/logout",
+      "cli": "logout create",
+      "cli_observed": true,
+      "boundary": "session",
+      "input_schema": "webfleet.logout.create.request.v1",
+      "output_schema": "webfleet.logout.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.maintenance.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/maintenance",
+      "cli": "maintenance get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "maintenance.read",
+      "output_schema": "webfleet.maintenance.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.maintenance.run.run",
+      "website": true,
+      "method": "POST",
+      "route": "/api/maintenance/run",
+      "cli": "maintenance-run run",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "maintenance.manage",
+      "input_schema": "webfleet.maintenance.run.run.request.v1",
+      "output_schema": "webfleet.maintenance.run.run.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.maintenance.update",
+      "website": true,
+      "method": "PUT",
+      "route": "/api/maintenance",
+      "cli": "maintenance update",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "maintenance.manage",
+      "input_schema": "webfleet.maintenance.update.request.v1",
+      "output_schema": "webfleet.maintenance.update.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.me.password.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/me/password",
+      "cli": "me-password create",
+      "cli_observed": true,
+      "boundary": "session",
+      "input_schema": "webfleet.me.password.create.request.v1",
+      "output_schema": "webfleet.me.password.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.notifications.deliveries.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/notifications/deliveries",
+      "cli": "notifications-deliveries list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "webhooks.read",
+      "output_schema": "webfleet.notifications.deliveries.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.notifications.webhooks.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/notifications/webhooks",
+      "cli": "notifications-webhooks create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "webhooks.manage",
+      "input_schema": "webfleet.notifications.webhooks.create.request.v1",
+      "output_schema": "webfleet.notifications.webhooks.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.notifications.webhooks.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/notifications/webhooks",
+      "cli": "notifications-webhooks list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "webhooks.read",
+      "output_schema": "webfleet.notifications.webhooks.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.oidc.config.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/oidc/config",
+      "cli": "oidc-config get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.oidc.config.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.oidc.config.update",
+      "website": true,
+      "method": "PUT",
+      "route": "/api/oidc/config",
+      "cli": "oidc-config update",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.update",
+      "input_schema": "webfleet.oidc.config.update.request.v1",
+      "output_schema": "webfleet.oidc.config.update.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.organization.members.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/organization/members",
+      "cli": "organization-members create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.organization.members.create.request.v1",
+      "output_schema": "webfleet.organization.members.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.organization.members.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/organization/members",
+      "cli": "organization-members list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "organization.read",
+      "output_schema": "webfleet.organization.members.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.service.api.cluster.v1.join.id.get",
+      "website": false,
+      "method": "GET",
+      "route": "/api/cluster/v1/join/{id}",
+      "cli_observed": false,
+      "boundary": "service",
+      "output_schema": "webfleet.service.api.cluster.v1.join.id.get.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.service.api.cluster.v1.join.post",
+      "website": false,
+      "method": "POST",
+      "route": "/api/cluster/v1/join",
+      "cli_observed": false,
+      "boundary": "service",
+      "input_schema": "webfleet.service.api.cluster.v1.join.post.request.v1",
+      "output_schema": "webfleet.service.api.cluster.v1.join.post.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.service.api.cluster.v1.rpc.compare.get",
+      "website": false,
+      "method": "GET",
+      "route": "/api/cluster/v1/rpc/compare",
+      "cli_observed": false,
+      "boundary": "service",
+      "output_schema": "webfleet.service.api.cluster.v1.rpc.compare.get.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.service.api.cluster.v1.rpc.summary.get",
+      "website": false,
+      "method": "GET",
+      "route": "/api/cluster/v1/rpc/summary",
+      "cli_observed": false,
+      "boundary": "service",
+      "output_schema": "webfleet.service.api.cluster.v1.rpc.summary.get.response.v1",
+      "tests": [
+        "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.session.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/session",
+      "cli": "session get",
+      "cli_observed": true,
+      "boundary": "session",
+      "output_schema": "webfleet.session.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.setup.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/setup",
+      "cli": "setup create",
+      "cli_observed": true,
+      "boundary": "public",
+      "input_schema": "webfleet.setup.create.request.v1",
+      "output_schema": "webfleet.setup.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.setup.database.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/setup/database",
+      "cli": "setup-database create",
+      "cli_observed": true,
+      "boundary": "public",
+      "input_schema": "webfleet.setup.database.create.request.v1",
+      "output_schema": "webfleet.setup.database.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.setup.database.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/setup/database",
+      "cli": "setup-database get",
+      "cli_observed": true,
+      "boundary": "public",
+      "output_schema": "webfleet.setup.database.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.setup.status.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/setup/status",
+      "cli": "setup-status get",
+      "cli_observed": true,
+      "boundary": "public",
+      "output_schema": "webfleet.setup.status.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.countries.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/analytics/countries",
+      "cli": "sites-analytics-countries get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.read",
+      "token_scopes": [
+        "analytics:read"
+      ],
+      "output_schema": "webfleet.sites.analytics.countries.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/analytics",
+      "cli": "sites-analytics create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.manage",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.analytics.create.request.v1",
+      "output_schema": "webfleet.sites.analytics.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.disable.disable",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/analytics/disable",
+      "cli": "sites-analytics-disable disable",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.manage",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.analytics.disable.disable.request.v1",
+      "output_schema": "webfleet.sites.analytics.disable.disable.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/analytics",
+      "cli": "sites-analytics get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.read",
+      "token_scopes": [
+        "analytics:read"
+      ],
+      "output_schema": "webfleet.sites.analytics.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.goals.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/analytics/goals",
+      "cli": "sites-analytics-goals create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.manage",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.analytics.goals.create.request.v1",
+      "output_schema": "webfleet.sites.analytics.goals.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.goals.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/analytics/goals",
+      "cli": "sites-analytics-goals get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.read",
+      "token_scopes": [
+        "analytics:read"
+      ],
+      "output_schema": "webfleet.sites.analytics.goals.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.pages.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/analytics/pages",
+      "cli": "sites-analytics-pages get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.read",
+      "token_scopes": [
+        "analytics:read"
+      ],
+      "output_schema": "webfleet.sites.analytics.pages.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.analytics.summary.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/analytics/summary",
+      "cli": "sites-analytics-summary get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "analytics.read",
+      "token_scopes": [
+        "analytics:read"
+      ],
+      "output_schema": "webfleet.sites.analytics.summary.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.archive.archive",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/archive",
+      "cli": "sites-archive archive",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.archive",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.archive.archive.request.v1",
+      "output_schema": "webfleet.sites.archive.archive.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.audit.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/audit",
+      "cli": "sites-audit create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "audit.run",
+      "token_scopes": [
+        "audit:run"
+      ],
+      "input_schema": "webfleet.sites.audit.create.request.v1",
+      "output_schema": "webfleet.sites.audit.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.audit.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/audit",
+      "cli": "sites-audit get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "audit.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.audit.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.audit.history.update",
+      "website": true,
+      "method": "PUT",
+      "route": "/api/sites/{id}/audit/history",
+      "cli": "sites-audit-history update",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "audit.configure",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.audit.history.update.request.v1",
+      "output_schema": "webfleet.sites.audit.history.update.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.check.check",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/check",
+      "cli": "sites-check check",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "monitor.run",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.check.check.request.v1",
+      "output_schema": "webfleet.sites.check.check.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.checks.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/checks",
+      "cli": "sites-checks get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "monitor.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.checks.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.crawl.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/crawl",
+      "cli": "sites-crawl create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "crawl.run",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.crawl.create.request.v1",
+      "output_schema": "webfleet.sites.crawl.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.crawl.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/crawl",
+      "cli": "sites-crawl get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "crawl.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.crawl.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites",
+      "cli": "sites create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.create",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.create.request.v1",
+      "output_schema": "webfleet.sites.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.delete",
+      "website": true,
+      "method": "DELETE",
+      "route": "/api/sites/{id}",
+      "cli": "sites delete",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.delete",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.delete.request.v1",
+      "output_schema": "webfleet.sites.delete.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.deployments.correlation.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/deployments/correlation",
+      "cli": "sites-deployments-correlation get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "deployments.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.deployments.correlation.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.deployments.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/deployments",
+      "cli": "sites-deployments create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "deployments.record",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.deployments.create.request.v1",
+      "output_schema": "webfleet.sites.deployments.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.deployments.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/deployments",
+      "cli": "sites-deployments get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "deployments.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.deployments.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.dns.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/dns",
+      "cli": "sites-dns get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "dns.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.dns.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.dns.observe.observe",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/dns/observe",
+      "cli": "sites-dns-observe observe",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "dns.run",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.dns.observe.observe.request.v1",
+      "output_schema": "webfleet.sites.dns.observe.observe.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}",
+      "cli": "sites get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.header.expectations.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/header-expectations",
+      "cli": "sites-header-expectations get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "monitor.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.header.expectations.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.header.expectations.update",
+      "website": true,
+      "method": "PUT",
+      "route": "/api/sites/{id}/header-expectations",
+      "cli": "sites-header-expectations update",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "monitor.update",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.header.expectations.update.request.v1",
+      "output_schema": "webfleet.sites.header.expectations.update.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.http.observations.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/http-observations",
+      "cli": "sites-http-observations get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "monitor.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.http.observations.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.incidents.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/incidents",
+      "cli": "sites-incidents get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "incidents.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.incidents.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.list",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites",
+      "cli": "sites list",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.list.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.performance.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/performance",
+      "cli": "sites-performance get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "monitor.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.performance.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.tags.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/tags",
+      "cli": "sites-tags get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.tags.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.tags.update",
+      "website": true,
+      "method": "PUT",
+      "route": "/api/sites/{id}/tags",
+      "cli": "sites-tags update",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.update",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.tags.update.request.v1",
+      "output_schema": "webfleet.sites.tags.update.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.tls.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/sites/{id}/tls",
+      "cli": "sites-tls get",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "tls.read",
+      "token_scopes": [
+        "sites:read"
+      ],
+      "output_schema": "webfleet.sites.tls.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.tls.inspect.inspect",
+      "website": true,
+      "method": "POST",
+      "route": "/api/sites/{id}/tls/inspect",
+      "cli": "sites-tls-inspect inspect",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "tls.run",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.tls.inspect.inspect.request.v1",
+      "output_schema": "webfleet.sites.tls.inspect.inspect.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.sites.update",
+      "website": true,
+      "method": "PUT",
+      "route": "/api/sites/{id}",
+      "cli": "sites update",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "site.update",
+      "token_scopes": [
+        "sites:write"
+      ],
+      "input_schema": "webfleet.sites.update.request.v1",
+      "output_schema": "webfleet.sites.update.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.tokens.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/tokens",
+      "cli": "tokens create",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "tokens.manage",
+      "input_schema": "webfleet.tokens.create.request.v1",
+      "output_schema": "webfleet.tokens.create.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.tokens.delete",
+      "website": true,
+      "method": "DELETE",
+      "route": "/api/tokens/{id}",
+      "cli": "tokens delete",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "tokens.manage",
+      "input_schema": "webfleet.tokens.delete.request.v1",
+      "output_schema": "webfleet.tokens.delete.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.wf.js.get",
+      "website": false,
+      "method": "GET",
+      "route": "/wf.js",
+      "cli_observed": false,
+      "boundary": "public",
+      "output_schema": "webfleet.wf.js.get.response.v1",
+      "tests": [
+        "internal/server/route_inventory_test.go"
+      ]
+    }
+  ]
+}

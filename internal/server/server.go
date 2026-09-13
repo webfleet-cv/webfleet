@@ -239,6 +239,35 @@ func NewAnalyticsIngest(cfg config.Config, st *store.Store, log *slog.Logger) *S
 	return s
 }
 
+// OperationRoute describes one concrete runtime API route for functional
+// coverage certification. It is projected directly from apiRouteDefs so the
+// matrix cannot silently diverge from shipped authorization/token policy.
+type OperationRoute struct {
+	Method      string
+	Path        string
+	Action      string
+	CSRF        bool
+	TokenScopes []string
+	Service     bool
+}
+
+// OperationRouteInventory returns the immutable runtime route surface,
+// including the node-only cluster transport endpoints registered beside the
+// human API table.
+func OperationRouteInventory() []OperationRoute {
+	out := make([]OperationRoute, 0, len(apiRouteDefs)+4)
+	for _, d := range apiRouteDefs {
+		out = append(out, OperationRoute{Method: d.method, Path: d.path, Action: d.action, CSRF: d.csrf, TokenScopes: append([]string(nil), d.tokenScopes...)})
+	}
+	out = append(out,
+		OperationRoute{Method: "POST", Path: "/api/cluster/v1/join", Service: true},
+		OperationRoute{Method: "GET", Path: "/api/cluster/v1/join/{id}", Service: true},
+		OperationRoute{Method: "GET", Path: "/api/cluster/v1/rpc/summary", Service: true},
+		OperationRoute{Method: "GET", Path: "/api/cluster/v1/rpc/compare", Service: true},
+	)
+	return out
+}
+
 // routes registers the application HTTP surface from the immutable apiRouteDefs
 // table. Every authenticated route declares its required permission and CSRF
 // posture here; adding a handler without a permission is a table change that

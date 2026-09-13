@@ -6,11 +6,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/gantry-tools/gantry-core/automation"
 	"github.com/webfleet-cv/webfleet/internal/config"
 	"github.com/webfleet-cv/webfleet/internal/crawler"
 	"github.com/webfleet-cv/webfleet/internal/dnsobs"
 	"github.com/webfleet-cv/webfleet/internal/monitor"
 	"github.com/webfleet-cv/webfleet/internal/notifications"
+	"github.com/webfleet-cv/webfleet/internal/operations"
 	"github.com/webfleet-cv/webfleet/internal/scheduler"
 	"github.com/webfleet-cv/webfleet/internal/server"
 	"github.com/webfleet-cv/webfleet/internal/service"
@@ -29,6 +31,15 @@ import (
 
 // version is overridden at release build time via -ldflags -X main.version.
 var version = "0.1.2"
+
+func functionalCLIResource(resource string) bool {
+	for _, c := range operations.Contracts {
+		if c.CLI != nil && c.CLI.Implemented && c.CLI.Resource == resource {
+			return true
+		}
+	}
+	return false
+}
 
 func main() {
 	// Service-management commands must remain usable even when the application
@@ -51,6 +62,9 @@ func main() {
 	if len(os.Args) == 2 && (os.Args[1] == "version" || os.Args[1] == "--version") {
 		fmt.Fprintln(os.Stdout, version)
 		return
+	}
+	if len(os.Args) >= 2 && functionalCLIResource(os.Args[1]) {
+		os.Exit(automation.Run(os.Args[1:], operations.Contracts, automation.Options{Program: "webfleet", DefaultURL: "http://127.0.0.1:7336", CookieName: "webfleet_session", CSRFHeader: "X-Webfleet-CSRF", CSRFFields: []string{"csrf"}, SessionInfoPath: "/api/session"}))
 	}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	cfg, err := config.Load()
