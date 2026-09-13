@@ -1,6 +1,6 @@
 module github.com/webfleet-cv/webfleet
 
-go 1.23
+go 1.25.0
 
 require (
 	github.com/chromedp/cdproto v0.0.0-20240202021202-6d0b6a386732
