@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	coreprop "github.com/gantry-tools/gantry-core/propagation"
 	"github.com/webfleet-cv/webfleet/internal/analytics"
 	"github.com/webfleet-cv/webfleet/internal/apitokens"
 	"github.com/webfleet-cv/webfleet/internal/audit"
@@ -33,6 +34,7 @@ import (
 	"github.com/webfleet-cv/webfleet/internal/notifications"
 	"github.com/webfleet-cv/webfleet/internal/oidc"
 	"github.com/webfleet-cv/webfleet/internal/performance"
+	productprop "github.com/webfleet-cv/webfleet/internal/propagation"
 	"github.com/webfleet-cv/webfleet/internal/rbac"
 	"github.com/webfleet-cv/webfleet/internal/requestmeta"
 	"github.com/webfleet-cv/webfleet/internal/sites"
@@ -106,6 +108,14 @@ var apiRouteDefs = []routeDef{
 	{"GET", "/api/cluster/v1/status", "organization.read", false, func(s *Server) handler { return s.handleClusterStatus }, nil},
 	{"GET", "/api/cluster/v1/audit", "organization.read", false, func(s *Server) handler { return s.handleClusterAudit }, nil},
 	{"GET", "/api/cluster/v1/compare", "organization.read", false, func(s *Server) handler { return s.handleClusterCompare }, nil},
+	{"GET", "/api/cluster/v1/propagation/kinds", "organization.read", false, func(s *Server) handler { return s.handlePropagationKinds }, nil},
+	{"POST", "/api/cluster/v1/propagation/export", "membership.update", true, func(s *Server) handler { return s.handlePropagationExport }, nil},
+	{"POST", "/api/cluster/v1/propagation/preview", "membership.update", true, func(s *Server) handler { return s.handlePropagationPreview }, nil},
+	{"POST", "/api/cluster/v1/propagation/apply", "membership.update", true, func(s *Server) handler { return s.handlePropagationApply }, nil},
+	{"POST", "/api/cluster/v1/propagation/propagate", "membership.update", true, func(s *Server) handler { return s.handlePropagationPropagate }, nil},
+	{"GET", "/api/cluster/v1/propagation/history", "organization.read", false, func(s *Server) handler { return s.handlePropagationHistory }, nil},
+	{"GET", "/api/cluster/v1/propagation/profiles", "organization.read", false, func(s *Server) handler { return s.handlePropagationProfiles }, nil},
+	{"PUT", "/api/cluster/v1/propagation/profiles/{id}", "membership.update", true, func(s *Server) handler { return s.handlePropagationProfilePut }, nil},
 	{"POST", "/api/me/password", "session", true, func(s *Server) handler { return s.handleChangePassword }, nil},
 	{"POST", "/api/tokens", "tokens.manage", true, func(s *Server) handler { return s.handleCreateToken }, nil},
 	{"DELETE", "/api/tokens/{id}", "tokens.manage", true, func(s *Server) handler { return s.handleRevokeToken }, nil},
@@ -184,6 +194,7 @@ type Server struct {
 	crawler          *crawler.Service
 	cluster          *clusterapi.Service
 	clusterTransport *clusterapi.Transport
+	propagation      *coreprop.Manager
 	geo              *geo.Manager
 	log              *slog.Logger
 	http             *http.Server
@@ -200,6 +211,7 @@ func New(cfg config.Config, st *store.Store, log *slog.Logger) *Server {
 	s := &Server{cfg: cfg, store: st, analytics: a, tokens: apitokens.New(st), audit: audit.NewWithOptions(st, audit.Options{Sandbox: cfg.AuditSandbox}), auth: auth.New(st), sites: sites.New(st), monitor: monitor.New(st), maintenance: maintenance.New(st), rbac: rbac.New(st), incidents: incidents.New(st), tls: tlshealth.New(st), dns: dnsobs.New(st), deployments: deployments.New(st), crawler: crawler.New(st), geo: geo.NewManager(cfg.DataDir, cfg.GeoIPURL), log: log, mux: http.NewServeMux(), proxy: requestmeta.Config{Trusted: cfg.TrustedProxies}, loginLim: newRateLimiter(time.Minute, 10, 10000), setupLim: newRateLimiter(time.Minute, 5, 1000), tokenLim: newRateLimiter(time.Minute, 20, 10000), passwordLim: newRateLimiter(time.Minute, 10, 10000)}
 	s.cluster = clusterapi.New(st.DB)
 	s.clusterTransport = clusterapi.NewTransport(st.DB, s.cluster, nil)
+	s.propagation = &coreprop.Manager{Adapter: productprop.New(st), Store: productprop.NewStateStore(st)}
 	s.oidc = oidc.New(st, s.auth)
 	s.notifications = notifications.New(st)
 	// Local country database: load any already-installed copy (no network); when
@@ -255,7 +267,7 @@ type OperationRoute struct {
 // including the node-only cluster transport endpoints registered beside the
 // human API table.
 func OperationRouteInventory() []OperationRoute {
-	out := make([]OperationRoute, 0, len(apiRouteDefs)+4)
+	out := make([]OperationRoute, 0, len(apiRouteDefs)+6)
 	for _, d := range apiRouteDefs {
 		out = append(out, OperationRoute{Method: d.method, Path: d.path, Action: d.action, CSRF: d.csrf, TokenScopes: append([]string(nil), d.tokenScopes...)})
 	}
@@ -264,6 +276,8 @@ func OperationRouteInventory() []OperationRoute {
 		OperationRoute{Method: "GET", Path: "/api/cluster/v1/join/{id}", Service: true},
 		OperationRoute{Method: "GET", Path: "/api/cluster/v1/rpc/summary", Service: true},
 		OperationRoute{Method: "GET", Path: "/api/cluster/v1/rpc/compare", Service: true},
+		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/propagation/preview", Service: true},
+		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/propagation/apply", Service: true},
 	)
 	return out
 }
@@ -277,6 +291,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/cluster/v1/join/{id}", s.handleClusterPollJoin)
 	s.mux.HandleFunc("GET /api/cluster/v1/rpc/summary", s.handleClusterRPCSummary)
 	s.mux.HandleFunc("GET /api/cluster/v1/rpc/compare", s.handleClusterRPCCompare)
+	s.mux.HandleFunc("POST /api/cluster/v1/rpc/propagation/preview", s.handlePropagationRPCPreview)
+	s.mux.HandleFunc("POST /api/cluster/v1/rpc/propagation/apply", s.handlePropagationRPCApply)
 	for _, def := range apiRouteDefs {
 		pattern := def.method + " " + def.path
 		h := def.build(s)

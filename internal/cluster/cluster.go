@@ -17,7 +17,7 @@ import (
 
 const ProtocolVersion = core.ProtocolVersion
 
-var DefaultCapabilities = []string{"cluster.health", "cluster.webfleet.summary", "cluster.webfleet.compare"}
+var DefaultCapabilities = []string{"cluster.health", "cluster.webfleet.summary", "cluster.webfleet.compare", "cluster.propagation"}
 
 type Service struct {
 	db  *database.DB
