@@ -58,6 +58,182 @@
     },
     {
       "method": "GET",
+      "path": "/api/cluster/v1/identity",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/members",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/invitations",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/joins",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/joins/{id}/{action}",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/outbound",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/outbound",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/outbound/{id}/collect",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/members/{id}/{action}",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/status",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/audit",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/compare",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/propagation/kinds",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/propagation/export",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/propagation/preview",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/propagation/apply",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/propagation/propagate",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/propagation/history",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cluster/v1/propagation/profiles",
+      "action": "organization.read",
+      "csrf": false,
+      "siteScoped": false,
+      "minRole": "viewer"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cluster/v1/propagation/profiles/{id}",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/cluster/v1/propagation/profiles/{id}",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cluster/v1/propagation/profiles/run-due",
+      "action": "membership.update",
+      "csrf": true,
+      "siteScoped": false,
+      "minRole": "admin"
+    },
+    {
+      "method": "GET",
       "path": "/healthz",
       "action": null,
       "csrf": false,
