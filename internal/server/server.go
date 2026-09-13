@@ -19,6 +19,7 @@ import (
 	"github.com/webfleet-cv/webfleet/internal/apitokens"
 	"github.com/webfleet-cv/webfleet/internal/audit"
 	"github.com/webfleet-cv/webfleet/internal/auth"
+	clusterapi "github.com/webfleet-cv/webfleet/internal/cluster"
 	"github.com/webfleet-cv/webfleet/internal/config"
 	"github.com/webfleet-cv/webfleet/internal/crawler"
 	"github.com/webfleet-cv/webfleet/internal/databasesetup"
@@ -93,6 +94,13 @@ var apiRouteDefs = []routeDef{
 	{"GET", "/api/session", "session", false, func(s *Server) handler { return s.handleSession }, nil},
 	{"GET", "/api/launcher/instances", "", false, func(s *Server) handler { return s.handleLauncherInstances }, nil},
 	{"PUT", "/api/launcher/config", "launcher.configure.all", true, func(s *Server) handler { return s.handleLauncherConfig }, nil},
+	{"GET", "/api/cluster/v1/identity", "organization.read", false, func(s *Server) handler { return s.handleClusterIdentity }, nil},
+	{"GET", "/api/cluster/v1/members", "organization.read", false, func(s *Server) handler { return s.handleClusterMembers }, nil},
+	{"POST", "/api/cluster/v1/invitations", "membership.update", true, func(s *Server) handler { return s.handleClusterInvite }, nil},
+	{"POST", "/api/cluster/v1/pair", "membership.update", true, func(s *Server) handler { return s.handleClusterPair }, nil},
+	{"POST", "/api/cluster/v1/members/{id}/{action}", "membership.update", true, func(s *Server) handler { return s.handleClusterMemberAction }, nil},
+	{"GET", "/api/cluster/v1/status", "organization.read", false, func(s *Server) handler { return s.handleClusterStatus }, nil},
+	{"GET", "/api/cluster/v1/compare", "organization.read", false, func(s *Server) handler { return s.handleClusterCompare }, nil},
 	{"POST", "/api/me/password", "session", true, func(s *Server) handler { return s.handleChangePassword }, nil},
 	{"POST", "/api/tokens", "tokens.manage", true, func(s *Server) handler { return s.handleCreateToken }, nil},
 	{"DELETE", "/api/tokens/{id}", "tokens.manage", true, func(s *Server) handler { return s.handleRevokeToken }, nil},
@@ -152,37 +160,41 @@ var apiRouteDefs = []routeDef{
 }
 
 type Server struct {
-	cfg           config.Config
-	store         *store.Store
-	analytics     *analytics.Service
-	tokens        *apitokens.Service
-	audit         *audit.Service
-	auth          *auth.Service
-	sites         *sites.Service
-	monitor       *monitor.Service
-	maintenance   *maintenance.Service
-	rbac          *rbac.Service
-	oidc          *oidc.Service
-	notifications *notifications.Service
-	incidents     *incidents.Service
-	tls           *tlshealth.Service
-	dns           *dnsobs.Service
-	deployments   *deployments.Service
-	crawler       *crawler.Service
-	geo           *geo.Manager
-	log           *slog.Logger
-	http          *http.Server
-	mux           *http.ServeMux
-	proxy         requestmeta.Config
-	loginLim      *rateLimiter
-	setupLim      *rateLimiter
-	tokenLim      *rateLimiter
-	passwordLim   *rateLimiter
+	cfg              config.Config
+	store            *store.Store
+	analytics        *analytics.Service
+	tokens           *apitokens.Service
+	audit            *audit.Service
+	auth             *auth.Service
+	sites            *sites.Service
+	monitor          *monitor.Service
+	maintenance      *maintenance.Service
+	rbac             *rbac.Service
+	oidc             *oidc.Service
+	notifications    *notifications.Service
+	incidents        *incidents.Service
+	tls              *tlshealth.Service
+	dns              *dnsobs.Service
+	deployments      *deployments.Service
+	crawler          *crawler.Service
+	cluster          *clusterapi.Service
+	clusterTransport *clusterapi.Transport
+	geo              *geo.Manager
+	log              *slog.Logger
+	http             *http.Server
+	mux              *http.ServeMux
+	proxy            requestmeta.Config
+	loginLim         *rateLimiter
+	setupLim         *rateLimiter
+	tokenLim         *rateLimiter
+	passwordLim      *rateLimiter
 }
 
 func New(cfg config.Config, st *store.Store, log *slog.Logger) *Server {
 	a := analytics.NewWithOptions(st, analytics.Options{AllowNoOrigin: cfg.AnalyticsServerSide})
 	s := &Server{cfg: cfg, store: st, analytics: a, tokens: apitokens.New(st), audit: audit.NewWithOptions(st, audit.Options{Sandbox: cfg.AuditSandbox}), auth: auth.New(st), sites: sites.New(st), monitor: monitor.New(st), maintenance: maintenance.New(st), rbac: rbac.New(st), incidents: incidents.New(st), tls: tlshealth.New(st), dns: dnsobs.New(st), deployments: deployments.New(st), crawler: crawler.New(st), geo: geo.NewManager(cfg.DataDir, cfg.GeoIPURL), log: log, mux: http.NewServeMux(), proxy: requestmeta.Config{Trusted: cfg.TrustedProxies}, loginLim: newRateLimiter(time.Minute, 10, 10000), setupLim: newRateLimiter(time.Minute, 5, 1000), tokenLim: newRateLimiter(time.Minute, 20, 10000), passwordLim: newRateLimiter(time.Minute, 10, 10000)}
+	s.cluster = clusterapi.New(st.DB)
+	s.clusterTransport = clusterapi.NewTransport(st.DB, s.cluster, nil)
 	s.oidc = oidc.New(st, s.auth)
 	s.notifications = notifications.New(st)
 	// Local country database: load any already-installed copy (no network); when
@@ -227,6 +239,8 @@ func NewAnalyticsIngest(cfg config.Config, st *store.Store, log *slog.Logger) *S
 // posture here; adding a handler without a permission is a table change that
 // the route-inventory contract test will reject.
 func (s *Server) routes() {
+	s.mux.HandleFunc("GET /api/cluster/v1/rpc/summary", s.handleClusterRPCSummary)
+	s.mux.HandleFunc("GET /api/cluster/v1/rpc/compare", s.handleClusterRPCCompare)
 	for _, def := range apiRouteDefs {
 		pattern := def.method + " " + def.path
 		h := def.build(s)
