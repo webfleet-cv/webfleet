@@ -21,7 +21,7 @@ type Store struct {
 	path string
 }
 
-const schemaVersion = 34
+const schemaVersion = 35
 
 type migration struct {
 	version int
@@ -200,6 +200,11 @@ var migrations = []migration{
 	{34, "cluster pairing lifecycle", []string{
 		`CREATE TABLE cluster_join_requests(id TEXT PRIMARY KEY, request_secret_hash BLOB NOT NULL UNIQUE, invitation_id TEXT NOT NULL REFERENCES cluster_invitations(id), node_id TEXT NOT NULL, installation_id TEXT NOT NULL, display_name TEXT NOT NULL DEFAULT '', public_endpoint TEXT NOT NULL, public_key BLOB NOT NULL, capabilities_json TEXT NOT NULL DEFAULT '[]', protocol_version INTEGER NOT NULL, product_version TEXT NOT NULL DEFAULT '', credential_for_local TEXT NOT NULL, state TEXT NOT NULL, expires_at TEXT NOT NULL, created_at TEXT NOT NULL, decided_at TEXT, response_consumed_at TEXT);`,
 		`CREATE TABLE cluster_outbound_joins(id TEXT PRIMARY KEY, remote_url TEXT NOT NULL, request_id TEXT NOT NULL, request_secret TEXT NOT NULL, local_inbound_credential TEXT NOT NULL, state TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, last_error TEXT NOT NULL DEFAULT '');`,
+	}},
+	{35, "propagation profiles and history", []string{
+		`CREATE TABLE propagation_profiles(id TEXT PRIMARY KEY, name TEXT NOT NULL, selector_json TEXT NOT NULL, kinds_json TEXT NOT NULL, mode TEXT NOT NULL, schedule TEXT NOT NULL DEFAULT '', maintenance_window TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);`,
+		`CREATE TABLE propagation_history(id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, actor TEXT NOT NULL, target TEXT NOT NULL, status TEXT NOT NULL, applied INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0, rolled_back INTEGER NOT NULL DEFAULT 0, detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL);`,
+		`CREATE INDEX propagation_history_created_idx ON propagation_history(created_at DESC);`,
 	}},
 }
 

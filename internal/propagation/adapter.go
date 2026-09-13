@@ -188,12 +188,11 @@ func (a *Adapter) Apply(ctx context.Context, e core.Envelope) (core.AppliedRevis
 			var gid int64
 			err := a.db.DB.QueryRowContext(ctx, `SELECT id FROM groups WHERE organization_id=? AND name=?`, p.OrganizationID, p.GroupName).Scan(&gid)
 			if errors.Is(err, sql.ErrNoRows) {
-				r, er := a.db.DB.ExecContext(ctx, `INSERT INTO groups(organization_id,name,created_at) VALUES(?,?,?)`, p.OrganizationID, p.GroupName, a.now().UTC().Format(time.RFC3339Nano))
+				_, er := a.db.DB.ExecContext(ctx, `INSERT INTO groups(organization_id,name,created_at) VALUES(?,?,?)`, p.OrganizationID, p.GroupName, a.now().UTC().Format(time.RFC3339Nano))
 				if er != nil {
 					return core.AppliedRevision{}, er
 				}
-				gid, er = r.LastInsertId()
-				if er != nil {
+				if er = a.db.DB.QueryRowContext(ctx, `SELECT id FROM groups WHERE organization_id=? AND name=?`, p.OrganizationID, p.GroupName).Scan(&gid); er != nil {
 					return core.AppliedRevision{}, er
 				}
 			} else if err != nil {
