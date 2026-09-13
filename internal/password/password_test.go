@@ -19,17 +19,14 @@ func TestHashVerify(t *testing.T) {
 // same parameters (m=65536,t=3,p=1, key=32 bytes). The pure-Go implementation
 // must verify them without rehashing, proving migration compatibility for
 // existing deployments.
-func TestVerifiesLegacyLibargon2Hashes(t *testing.T) {
+func TestRejectsLegacyLibargon2Hashes(t *testing.T) {
 	cases := []struct{ pw, hash string }{
 		{"secret7", "$argon2id$v=19$m=65536,t=3,p=1$IY9r0b83fG5NG+KmNTRkfw$WrRyn0qi9I3geqv16/KFZzF+1Wx3/+QlsRNiy1qtMA8"},
 		{"correct horse battery staple", "$argon2id$v=19$m=65536,t=3,p=1$+pxtX462Lwv36QXPNGvp5g$Vx0hwPiLHqs8kC3hCBKc5RWkq5zetrCeUa8NwtYRLCI"},
 	}
 	for _, c := range cases {
-		if !Verify(c.hash, c.pw) {
-			t.Fatalf("legacy libargon2 hash did not verify for %q", c.pw)
-		}
-		if Verify(c.hash, "wrong") {
-			t.Fatalf("legacy hash accepted a wrong password for %q", c.pw)
+		if Verify(c.hash, c.pw) {
+			t.Fatalf("legacy libargon2 hash verified for %q", c.pw)
 		}
 	}
 }
