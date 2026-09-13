@@ -14,10 +14,7 @@ type KindPolicy struct {
 
 var policies = map[string]KindPolicy{
 	"request-definition": {Kind: "request-definition", Reversible: true, Permission: "sites.update"},
-	"environment":        {Kind: "environment", Reversible: true, Permission: "sites.update"},
 	"monitor-definition": {Kind: "monitor-definition", Reversible: true, Permission: "monitors.update"},
-	"schedule":           {Kind: "schedule", Reversible: true, Permission: "monitors.update"},
-	"execution-policy":   {Kind: "execution-policy", Reversible: true, Permission: "monitors.update"},
 }
 
 func Policy(kind string) (KindPolicy, bool) { p, ok := policies[kind]; return p, ok }
@@ -31,6 +28,4 @@ func ValidateEnvelope(e core.Envelope) error {
 	}
 	return e.Validate()
 }
-func Kinds() []string {
-	return []string{"environment", "execution-policy", "monitor-definition", "request-definition", "schedule"}
-}
+func Kinds() []string { return []string{"monitor-definition", "request-definition"} }
