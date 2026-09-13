@@ -21,7 +21,7 @@ type Store struct {
 	path string
 }
 
-const schemaVersion = 32
+const schemaVersion = 33
 
 type migration struct {
 	version int
@@ -189,6 +189,13 @@ var migrations = []migration{
 	}},
 	{32, "instance launcher", []string{
 		`CREATE TABLE launcher_instances(id TEXT PRIMARY KEY, position INTEGER NOT NULL, name TEXT NOT NULL, domain TEXT NOT NULL, port INTEGER);`,
+	}},
+	{33, "gantry cluster membership", []string{
+		`CREATE TABLE cluster_identity(singleton INTEGER PRIMARY KEY CHECK(singleton=1), node_id TEXT NOT NULL UNIQUE, installation_id TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL DEFAULT '', public_endpoint TEXT NOT NULL DEFAULT '', public_key BLOB NOT NULL, private_key BLOB NOT NULL, capabilities_json TEXT NOT NULL, protocol_version INTEGER NOT NULL, product_version TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL);`,
+		`CREATE TABLE cluster_members(node_id TEXT PRIMARY KEY, installation_id TEXT NOT NULL UNIQUE, display_name TEXT NOT NULL DEFAULT '', public_endpoint TEXT NOT NULL, public_key BLOB NOT NULL, capabilities_json TEXT NOT NULL, protocol_version INTEGER NOT NULL, product_version TEXT NOT NULL DEFAULT '', state TEXT NOT NULL CHECK(state IN ('active','disabled','revoked')), outbound_secret TEXT NOT NULL, inbound_secret_hash BLOB NOT NULL, credential_version INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, paired_at TEXT NOT NULL, last_seen_at TEXT, last_latency_ms INTEGER, revoked_at TEXT);`,
+		`CREATE TABLE cluster_invitations(id TEXT PRIMARY KEY, token_hash BLOB NOT NULL UNIQUE, state TEXT NOT NULL, created_at TEXT NOT NULL, expires_at TEXT NOT NULL, used_at TEXT);`,
+		`CREATE TABLE cluster_nonces(node_id TEXT NOT NULL REFERENCES cluster_members(node_id) ON DELETE CASCADE, nonce TEXT NOT NULL, seen_at TEXT NOT NULL, PRIMARY KEY(node_id,nonce));`,
+		`CREATE INDEX cluster_nonces_seen ON cluster_nonces(seen_at);`,
 	}},
 }
 
