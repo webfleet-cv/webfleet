@@ -200,3 +200,66 @@ func (s *Server) handlePropagationPropagate(w http.ResponseWriter, r *http.Reque
 	results := core.ApplyNodes(r.Context(), nodes, q.PlanID, env, actor, 4, s.remotePropagationApply)
 	writeJSON(w, 200, map[string]any{"plan_id": q.PlanID, "preview": pre, "results": results})
 }
+
+func (s *Server) propagationProfileExecutor(ctx context.Context) (core.ProfileExecutor, error) {
+	members, err := s.cluster.Members(ctx)
+	if err != nil {
+		return core.ProfileExecutor{}, err
+	}
+	ms := make([]core.Member, 0, len(members))
+	for _, m := range members {
+		ms = append(ms, core.Member{ID: m.NodeID, Capabilities: m.Capabilities, Enabled: m.State == "active"})
+	}
+	return core.ProfileExecutor{Members: ms, Export: s.propagation.Export, Preview: s.remotePropagationPreview, Apply: s.remotePropagationApply}, nil
+}
+
+func (s *Server) runPropagationProfile(ctx context.Context, p core.Profile) (core.ProfileRunResult, error) {
+	exec, err := s.propagationProfileExecutor(ctx)
+	if err != nil {
+		return core.ProfileRunResult{ProfileID: p.ID}, err
+	}
+	return core.ExecuteProfile(ctx, p, core.Actor{Kind: "system", ID: "scheduler"}, exec)
+}
+
+func (s *Server) runDuePropagationProfiles(ctx context.Context) ([]core.ProfileRunResult, error) {
+	return s.propagation.RunDueProfiles(ctx, s.runPropagationProfile)
+}
+
+func (s *Server) propagationLoop(ctx context.Context) {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			results, err := s.runDuePropagationProfiles(ctx)
+			if err != nil {
+				s.log.Warn("propagation reconciliation failed", "error", err)
+				continue
+			}
+			for _, result := range results {
+				if result.Error != "" || result.Failed > 0 {
+					s.log.Warn("propagation profile run incomplete", "profile", result.ProfileID, "action", result.Action, "drift", result.Drift, "failed", result.Failed, "error", result.Error)
+				}
+			}
+		}
+	}
+}
+
+func (s *Server) handlePropagationProfileDelete(w http.ResponseWriter, r *http.Request, _ principal) {
+	if err := s.propagation.DeleteProfile(r.Context(), r.PathValue("id")); err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handlePropagationRunDue(w http.ResponseWriter, r *http.Request, _ principal) {
+	results, err := s.runDuePropagationProfiles(r.Context())
+	if err != nil {
+		writeError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 200, results)
+}

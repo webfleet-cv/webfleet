@@ -206,6 +206,9 @@ var migrations = []migration{
 		`CREATE TABLE propagation_history(id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, actor TEXT NOT NULL, target TEXT NOT NULL, status TEXT NOT NULL, applied INTEGER NOT NULL DEFAULT 0, failed INTEGER NOT NULL DEFAULT 0, rolled_back INTEGER NOT NULL DEFAULT 0, detail TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL);`,
 		`CREATE INDEX propagation_history_created_idx ON propagation_history(created_at DESC);`,
 	}},
+	{36, "propagation scheduling state", []string{
+		`ALTER TABLE propagation_profiles ADD COLUMN last_run_at TEXT;`,
+	}},
 }
 
 func Open(dataDir string) (*Store, error) {

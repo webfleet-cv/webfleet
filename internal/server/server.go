@@ -116,6 +116,8 @@ var apiRouteDefs = []routeDef{
 	{"GET", "/api/cluster/v1/propagation/history", "organization.read", false, func(s *Server) handler { return s.handlePropagationHistory }, nil},
 	{"GET", "/api/cluster/v1/propagation/profiles", "organization.read", false, func(s *Server) handler { return s.handlePropagationProfiles }, nil},
 	{"PUT", "/api/cluster/v1/propagation/profiles/{id}", "membership.update", true, func(s *Server) handler { return s.handlePropagationProfilePut }, nil},
+	{"DELETE", "/api/cluster/v1/propagation/profiles/{id}", "membership.update", true, func(s *Server) handler { return s.handlePropagationProfileDelete }, nil},
+	{"POST", "/api/cluster/v1/propagation/profiles/run-due", "membership.update", true, func(s *Server) handler { return s.handlePropagationRunDue }, nil},
 	{"POST", "/api/me/password", "session", true, func(s *Server) handler { return s.handleChangePassword }, nil},
 	{"POST", "/api/tokens", "tokens.manage", true, func(s *Server) handler { return s.handleCreateToken }, nil},
 	{"DELETE", "/api/tokens/{id}", "tokens.manage", true, func(s *Server) handler { return s.handleRevokeToken }, nil},
@@ -175,35 +177,36 @@ var apiRouteDefs = []routeDef{
 }
 
 type Server struct {
-	cfg              config.Config
-	store            *store.Store
-	analytics        *analytics.Service
-	tokens           *apitokens.Service
-	audit            *audit.Service
-	auth             *auth.Service
-	sites            *sites.Service
-	monitor          *monitor.Service
-	maintenance      *maintenance.Service
-	rbac             *rbac.Service
-	oidc             *oidc.Service
-	notifications    *notifications.Service
-	incidents        *incidents.Service
-	tls              *tlshealth.Service
-	dns              *dnsobs.Service
-	deployments      *deployments.Service
-	crawler          *crawler.Service
-	cluster          *clusterapi.Service
-	clusterTransport *clusterapi.Transport
-	propagation      *coreprop.Manager
-	geo              *geo.Manager
-	log              *slog.Logger
-	http             *http.Server
-	mux              *http.ServeMux
-	proxy            requestmeta.Config
-	loginLim         *rateLimiter
-	setupLim         *rateLimiter
-	tokenLim         *rateLimiter
-	passwordLim      *rateLimiter
+	cfg               config.Config
+	store             *store.Store
+	analytics         *analytics.Service
+	tokens            *apitokens.Service
+	audit             *audit.Service
+	auth              *auth.Service
+	sites             *sites.Service
+	monitor           *monitor.Service
+	maintenance       *maintenance.Service
+	rbac              *rbac.Service
+	oidc              *oidc.Service
+	notifications     *notifications.Service
+	incidents         *incidents.Service
+	tls               *tlshealth.Service
+	dns               *dnsobs.Service
+	deployments       *deployments.Service
+	crawler           *crawler.Service
+	cluster           *clusterapi.Service
+	clusterTransport  *clusterapi.Transport
+	propagation       *coreprop.Manager
+	geo               *geo.Manager
+	log               *slog.Logger
+	http              *http.Server
+	mux               *http.ServeMux
+	proxy             requestmeta.Config
+	loginLim          *rateLimiter
+	setupLim          *rateLimiter
+	tokenLim          *rateLimiter
+	passwordLim       *rateLimiter
+	propagationCancel context.CancelFunc
 }
 
 func New(cfg config.Config, st *store.Store, log *slog.Logger) *Server {
@@ -1520,6 +1523,16 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]any{"error": strings.TrimSpace(msg)})
 }
-func (s *Server) ListenAndServe() error              { return s.http.ListenAndServe() }
-func (s *Server) Shutdown(ctx context.Context) error { return s.http.Shutdown(ctx) }
-func (s *Server) Handler() http.Handler              { return s.mux }
+func (s *Server) ListenAndServe() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	s.propagationCancel = cancel
+	go s.propagationLoop(ctx)
+	return s.http.ListenAndServe()
+}
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.propagationCancel != nil {
+		s.propagationCancel()
+	}
+	return s.http.Shutdown(ctx)
+}
+func (s *Server) Handler() http.Handler { return s.mux }
