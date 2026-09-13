@@ -256,7 +256,7 @@ As of this handover revision:
 ## Immediate next step
 
 The CP30 adversarial review, the release-hardening campaigns, and the stable
-`v0.1.0` public-preview release are complete. Development continues at **0.1.2**
+`v0.1.0` public-preview release are complete. Development continues at **0.1.1**
 on `main`.
 
 Post-release validation/backlog (not release-blocking):
@@ -270,8 +270,8 @@ enforced by the route-inventory contract test.
 ## Current release state
 
 - Released stable: **v0.1.1** (stable public preview).
-- Current development: **0.1.2** on `main`. An ordinary development build
-  reports 0.1.2 with commit `unknown`; release builds override the default via
+- Current development: **0.1.1** on `main`. An ordinary development build
+  reports 0.1.1 with commit `unknown`; release builds override the default via
   `-ldflags -X main.version` and are never confused with the released version.
 
 # Release procedure
