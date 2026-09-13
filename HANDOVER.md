@@ -1,5 +1,9 @@
 # Web Fleet handover
 
+## Shared operation campaign
+
+Webfleet follows `gantry-core/docs/CLI_API_CLUSTER_ROADMAP.md`. Phase 1 CP8 adopts the v0.1.1 contract for site listing, creation and archival. Its CLI names are reserved, not marked implemented; Phase 5 must wire and runtime-observe them before executable coverage is advertised.
+
 ## Frontend asset ownership
 
 Nift tracks and builds HTML pages only. CSS, JavaScript, images, icons and other
