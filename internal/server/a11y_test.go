@@ -74,7 +74,7 @@ func a11yServer(t *testing.T) *httptest.Server {
 func a11ySetup(t *testing.T, ctx context.Context, srv *httptest.Server) {
 	t.Helper()
 	resp, err := http.Post(srv.URL+"/api/setup", "application/json",
-		bytes.NewBufferString(`{"email":"admin@example.com","password":"secret7"}`))
+		bytes.NewBufferString(`{"username":"admin","email":"admin@example.com","password":"secret7"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

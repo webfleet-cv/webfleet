@@ -122,7 +122,7 @@ func TestPostgresCoreParity(t *testing.T) {
 	ctx := context.Background()
 
 	authSvc := auth.New(st)
-	if err := authSvc.CreateAdmin("admin@example.com", "secret7"); err != nil {
+	if err := authSvc.CreateAdmin("admin", "admin@example.com", "secret7"); err != nil {
 		t.Fatal(err)
 	}
 	tok, sess, err := authSvc.Login("admin@example.com", "secret7")
@@ -246,7 +246,7 @@ func TestPostgresBackupRestoreRehearsal(t *testing.T) {
 	st, dsn := openFreshPG(t)
 	ctx := context.Background()
 	authSvc := auth.New(st)
-	if err := authSvc.CreateAdmin("admin@example.com", "secret7"); err != nil {
+	if err := authSvc.CreateAdmin("admin", "admin@example.com", "secret7"); err != nil {
 		t.Fatal(err)
 	}
 	site, err := sites.New(st).Create(1, "Example", "https://127.0.0.1:1/", 0)
@@ -322,7 +322,7 @@ func TestProviderDetection(t *testing.T) {
 func TestPostgresParityExtended(t *testing.T) {
 	st, _ := openFreshPG(t)
 	ctx := context.Background()
-	if err := auth.New(st).CreateAdmin("admin@example.com", "secret7"); err != nil {
+	if err := auth.New(st).CreateAdmin("admin", "admin@example.com", "secret7"); err != nil {
 		t.Fatal(err)
 	}
 	org, err := st.PrimaryOrgID(ctx)
@@ -508,7 +508,7 @@ func TestPostgresFirstRunLifecycle(t *testing.T) {
 	}
 	// 7. Create the first administrator on PostgreSQL.
 	a := auth.New(pgSt)
-	if err := a.CreateAdmin("admin@example.com", "secret7"); err != nil {
+	if err := a.CreateAdmin("admin", "admin@example.com", "secret7"); err != nil {
 		t.Fatal(err)
 	}
 	if _, _, err := a.Login("admin@example.com", "secret7"); err != nil {
@@ -633,7 +633,7 @@ func TestEnvProvisionedPostgresStartup(t *testing.T) {
 	if err != nil || state.Selectable || state.RestartRequired || state.Provider != "postgres" {
 		t.Fatalf("env-provisioned setup state: %+v %v", state, err)
 	}
-	if err := auth.New(st).CreateAdmin("admin@example.com", "secret7"); err != nil {
+	if err := auth.New(st).CreateAdmin("admin", "admin@example.com", "secret7"); err != nil {
 		t.Fatal(err)
 	}
 	if need, _ := auth.New(st).NeedsSetup(); need {

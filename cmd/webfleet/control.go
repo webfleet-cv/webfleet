@@ -21,9 +21,10 @@ func runSetup(args []string) int {
 	fs.SetOutput(io.Discard)
 	email := fs.String("email", "", "administrator email")
 	emailFile := fs.String("email-file", "", "file containing administrator email")
+	username := fs.String("username", "", "administrator username")
 	passwordFile := fs.String("password-file", "", "file containing password")
 	if err := fs.Parse(args); err != nil || fs.NArg() != 0 || *passwordFile == "" {
-		fmt.Fprintln(os.Stderr, "usage: webfleet setup (--email ADDRESS|--email-file FILE) --password-file FILE")
+		fmt.Fprintln(os.Stderr, "usage: webfleet setup (--email ADDRESS|--email-file FILE) --username NAME --password-file FILE")
 		return 2
 	}
 	if *emailFile != "" {
@@ -59,7 +60,7 @@ func runSetup(args []string) int {
 		return 1
 	}
 	defer db.Close()
-	if err = auth.New(db).CreateAdmin(*email, strings.TrimRight(string(password), "\r\n")); err != nil {
+	if err = auth.New(db).CreateAdmin(*username, *email, strings.TrimRight(string(password), "\r\n")); err != nil {
 		fmt.Fprintln(os.Stderr, "webfleet:", err)
 		return 1
 	}

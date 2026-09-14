@@ -19,7 +19,7 @@ func TestAuthAndCSRF(t *testing.T) {
 	}
 	defer st.Close()
 	s := New(config.Config{}, st, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	req := httptest.NewRequest("POST", "/api/setup", bytes.NewBufferString(`{"email":"a@example.com","password":"secret7"}`))
+	req := httptest.NewRequest("POST", "/api/setup", bytes.NewBufferString(`{"username":"a","email":"a@example.com","password":"secret7"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 	s.Handler().ServeHTTP(rr, req)

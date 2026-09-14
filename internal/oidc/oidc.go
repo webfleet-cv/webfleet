@@ -221,7 +221,7 @@ func (s *Service) Callback(ctx context.Context, state, code, redirect, browser s
 		if e != nil {
 			return "", auth.Session{}, e
 		}
-		u, e = sqlite.Query(s.st.DB, `INSERT INTO users(email,password_hash,role,created_at) VALUES(?,'','viewer',?) RETURNING id,email`, strings.ToLower(claims.Email), store.Now())
+		u, e = sqlite.Query(s.st.DB, `INSERT INTO users(username,email,password_hash,role,created_at) VALUES(?,?,'','viewer',?) RETURNING id,email`, strings.ToLower(strings.SplitN(claims.Email, "@", 2)[0]), strings.ToLower(claims.Email), store.Now())
 		if e != nil {
 			return "", auth.Session{}, e
 		}

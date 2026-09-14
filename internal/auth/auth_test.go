@@ -19,10 +19,10 @@ func TestFirstAdminAndSessionLifecycle(t *testing.T) {
 	if e != nil || !need {
 		t.Fatalf("need=%v err=%v", need, e)
 	}
-	if e = a.CreateAdmin("admin@example.com", "secret7"); e != nil {
+	if e = a.CreateAdmin("admin", "admin@example.com", "secret7"); e != nil {
 		t.Fatal(e)
 	}
-	if e = a.CreateAdmin("other@example.com", "secret7"); e == nil {
+	if e = a.CreateAdmin("other", "other@example.com", "secret7"); e == nil {
 		t.Fatal("second first-admin allowed")
 	}
 	tok, s, e := a.Login("admin@example.com", "secret7")
@@ -45,7 +45,7 @@ func TestChangePasswordKeepsCurrentSessionAndRevokesOthers(t *testing.T) {
 	}
 	defer st.Close()
 	a := New(st)
-	if err = a.CreateAdmin("admin@example.com", "old-password"); err != nil {
+	if err = a.CreateAdmin("admin", "admin@example.com", "old-password"); err != nil {
 		t.Fatal(err)
 	}
 	currentToken, current, err := a.Login("admin@example.com", "old-password")
@@ -83,7 +83,7 @@ func TestFirstAdminGetsOwnerMembership(t *testing.T) {
 	}
 	defer st.Close()
 	a := New(st)
-	if e = a.CreateAdmin("admin@example.com", "secret7"); e != nil {
+	if e = a.CreateAdmin("admin", "admin@example.com", "secret7"); e != nil {
 		t.Fatal(e)
 	}
 	org, e := st.PrimaryOrgID(context.Background())
@@ -116,7 +116,7 @@ func TestConcurrentFirstAdminRaceGuard(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			errs[i] = a.CreateAdmin("admin"+string(rune('a'+i))+"@example.com", "secret7")
+			errs[i] = a.CreateAdmin("admin"+string(rune('a'+i)), "admin"+string(rune('a'+i))+"@example.com", "secret7")
 		}(i)
 	}
 	wg.Wait()

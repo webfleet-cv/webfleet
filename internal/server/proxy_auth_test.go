@@ -41,7 +41,7 @@ func sessionCookie(rr *httptest.ResponseRecorder) *http.Cookie {
 
 func TestSecureCookieDirectHTTPS(t *testing.T) {
 	s, _ := newTrustedServer(t)
-	req := httptest.NewRequest("POST", "/api/setup", strings.NewReader(`{"email":"admin@example.com","password":"secret7"}`))
+	req := httptest.NewRequest("POST", "/api/setup", strings.NewReader(`{"username":"admin","email":"admin@example.com","password":"secret7"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "192.0.2.1:1234"
 	req.TLS = &tls.ConnectionState{}
@@ -61,7 +61,7 @@ func TestSecureCookieDirectHTTPS(t *testing.T) {
 
 func TestSecureCookieTrustedTLSProxy(t *testing.T) {
 	s, _ := newTrustedServer(t, "127.0.0.1/32")
-	req := httptest.NewRequest("POST", "/api/setup", strings.NewReader(`{"email":"admin@example.com","password":"secret7"}`))
+	req := httptest.NewRequest("POST", "/api/setup", strings.NewReader(`{"username":"admin","email":"admin@example.com","password":"secret7"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "127.0.0.1:9999" // the trusted proxy
 	req.Header.Set("X-Forwarded-Proto", "https")
@@ -77,7 +77,7 @@ func TestSecureCookieTrustedTLSProxy(t *testing.T) {
 
 func TestSecureCookieUntrustedSpoofCannotUpgrade(t *testing.T) {
 	s, _ := newTrustedServer(t, "127.0.0.1/32")
-	req := httptest.NewRequest("POST", "/api/setup", strings.NewReader(`{"email":"admin@example.com","password":"secret7"}`))
+	req := httptest.NewRequest("POST", "/api/setup", strings.NewReader(`{"username":"admin","email":"admin@example.com","password":"secret7"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.RemoteAddr = "198.51.100.7:1234" // untrusted direct peer
 	req.Header.Set("X-Forwarded-Proto", "https")
@@ -133,12 +133,12 @@ func TestLoginRateLimit(t *testing.T) {
 func TestSetupRateLimit(t *testing.T) {
 	s, _ := newTrustedServer(t)
 	for i := 0; i < 5; i++ {
-		rr := doReq(t, s, nil, "POST", "/api/setup", `{"email":"a@b.c","password":"x"}`)
+		rr := doReq(t, s, nil, "POST", "/api/setup", `{"username":"admin", "email":"a@b.c","password":"x"}`)
 		if rr.Code != 400 {
 			t.Fatalf("setup attempt %d = %d, want 400", i, rr.Code)
 		}
 	}
-	if rr := doReq(t, s, nil, "POST", "/api/setup", `{"email":"a@b.c","password":"x"}`); rr.Code != 429 {
+	if rr := doReq(t, s, nil, "POST", "/api/setup", `{"username":"admin", "email":"a@b.c","password":"x"}`); rr.Code != 429 {
 		t.Fatalf("over-limit setup = %d, want 429", rr.Code)
 	}
 }

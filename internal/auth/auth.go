@@ -43,10 +43,11 @@ func (a *Service) NeedsSetup() (bool, error) {
 	}
 	return a.accounts.Empty(), nil
 }
-func (a *Service) CreateAdmin(email, pw string) error {
+func (a *Service) CreateAdmin(username, email, pw string) error {
+	username = strings.TrimSpace(username)
 	email = strings.TrimSpace(strings.ToLower(email))
-	if !strings.Contains(email, "@") || len(pw) < MinPasswordLength {
-		return errors.New("valid email and password of at least 7 characters required")
+	if username == "" || !strings.Contains(email, "@") || len(pw) < MinPasswordLength {
+		return errors.New("valid username, email and password of at least 7 characters required")
 	}
 	need, e := a.NeedsSetup()
 	if e != nil {
@@ -77,7 +78,7 @@ func (a *Service) CreateAdmin(email, pw string) error {
 			return e
 		}
 	}
-	res, e := tx.ExecContext(ctx, `INSERT INTO users(email,password_hash,role,created_at) SELECT ?,?,'admin',? WHERE NOT EXISTS(SELECT 1 FROM users)`, email, h, store.Now())
+	res, e := tx.ExecContext(ctx, `INSERT INTO users(username,email,password_hash,role,created_at) SELECT ?,?,?,'admin',? WHERE NOT EXISTS(SELECT 1 FROM users)`, username, email, h, store.Now())
 	if e != nil {
 		return e
 	}

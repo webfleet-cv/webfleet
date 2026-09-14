@@ -227,7 +227,7 @@ func newOIDCService(t *testing.T, fp *fakeProvider, auto, enabled bool) (*Servic
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	if e = auth.New(st).CreateAdmin("admin@example.test", "secret7"); e != nil {
+	if e = auth.New(st).CreateAdmin("admin", "admin@example.test", "secret7"); e != nil {
 		t.Fatal(e)
 	}
 	svc := New(st, auth.New(st))

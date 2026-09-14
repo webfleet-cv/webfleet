@@ -13,7 +13,7 @@ func TestScopeAndRevoke(t *testing.T) {
 	}
 	defer st.Close()
 	a := auth.New(st)
-	if e = a.CreateAdmin("a@b.c", "password"); e != nil {
+	if e = a.CreateAdmin("a", "a@b.c", "password"); e != nil {
 		t.Fatal(e)
 	}
 	var uid, oid int64

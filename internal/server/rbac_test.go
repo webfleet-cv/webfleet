@@ -79,7 +79,7 @@ func sessionOf(t *testing.T, rr *httptest.ResponseRecorder) *client {
 
 func setupAdmin(t *testing.T, s *Server) *client {
 	t.Helper()
-	rr := doReq(t, s, nil, "POST", "/api/setup", `{"email":"admin@example.com","password":"secret7"}`)
+	rr := doReq(t, s, nil, "POST", "/api/setup", `{"username":"admin", "email":"admin@example.com","password":"secret7"}`)
 	if rr.Code != 201 {
 		t.Fatalf("setup %d %s", rr.Code, rr.Body.String())
 	}
@@ -92,7 +92,7 @@ func createUser(t *testing.T, st *store.Store, email, pw, role string) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if e = sqlite.Exec(st.DB, `INSERT INTO users(email,password_hash,role,created_at) VALUES(?,?,?,?)`, email, h, role, store.Now()); e != nil {
+	if e = sqlite.Exec(st.DB, `INSERT INTO users(username,email,password_hash,role,created_at) VALUES(?,?,?,?,?)`, strings.SplitN(email, "@", 2)[0], email, h, role, store.Now()); e != nil {
 		t.Fatal(e)
 	}
 	r, e := sqlite.Query(st.DB, `SELECT id FROM users WHERE lower(email)=?`, email)
@@ -368,7 +368,7 @@ func TestSetupRaceAtHTTP(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			rr := doReq(t, s, nil, "POST", "/api/setup", fmt.Sprintf(`{"email":"u%d@example.com","password":"secret7"}`, i))
+			rr := doReq(t, s, nil, "POST", "/api/setup", fmt.Sprintf(`{"username":"u%d","email":"u%d@example.com","password":"secret7"}`, i, i))
 			codes[i] = rr.Code
 		}(i)
 	}

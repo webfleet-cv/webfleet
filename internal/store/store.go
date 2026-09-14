@@ -21,7 +21,7 @@ type Store struct {
 	path string
 }
 
-const schemaVersion = 38
+const schemaVersion = 39
 
 type migration struct {
 	version int
@@ -215,6 +215,10 @@ var migrations = []migration{
 	}},
 	{38, "cluster outbound rotation overlap", []string{
 		`ALTER TABLE cluster_members ADD COLUMN previous_outbound_secret TEXT`,
+	}},
+	{39, "user username", []string{
+		`ALTER TABLE users ADD COLUMN username TEXT`,
+		`UPDATE users SET username = CASE WHEN instr(email,'@')>0 THEN substr(email,1,instr(email,'@')-1) ELSE email END WHERE username IS NULL OR trim(username)=''`,
 	}},
 }
 

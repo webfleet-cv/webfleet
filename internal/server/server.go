@@ -865,11 +865,11 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request, _ principal
 		writeError(w, 429, "too many setup attempts, try again later")
 		return
 	}
-	var in struct{ Email, Password string }
+	var in struct{ Username, Email, Password string }
 	if !decodeJSON(w, r, &in) {
 		return
 	}
-	if err := s.auth.CreateAdmin(in.Email, in.Password); err != nil {
+	if err := s.auth.CreateAdmin(in.Username, in.Email, in.Password); err != nil {
 		writeError(w, 400, err.Error())
 		return
 	}

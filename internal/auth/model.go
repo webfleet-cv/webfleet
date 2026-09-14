@@ -22,15 +22,15 @@ type accountPersistence struct{ store *store.Store }
 
 func (p accountPersistence) LoadAccounts() (coreauth.AccountsFile, error) {
 	result := coreauth.AccountsFile{Version: accountSchemaVersion, Accounts: []coreauth.Account{}}
-	rows, err := p.store.DB.Query("SELECT id,email,password_hash,role,created_at FROM users ORDER BY email")
+	rows, err := p.store.DB.Query("SELECT id,username,email,password_hash,role,created_at FROM users ORDER BY email")
 	if err != nil {
 		return result, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var id int64
-		var email, hash, role, created string
-		if err := rows.Scan(&id, &email, &hash, &role, &created); err != nil {
+		var username, email, hash, role, created string
+		if err := rows.Scan(&id, &username, &email, &hash, &role, &created); err != nil {
 			return result, err
 		}
 		createdAt, err := time.Parse(time.RFC3339Nano, created)
@@ -44,10 +44,10 @@ func (p accountPersistence) LoadAccounts() (coreauth.AccountsFile, error) {
 		}
 		identity := coreauth.Identity{ID: "email_" + accountID, Type: "email", Email: email, Enabled: true}
 		if hash != "" {
-			identity = coreauth.Identity{ID: "pwd_" + accountID, Type: "password", Username: email, Email: email, PasswordHash: hash, Enabled: true}
+			identity = coreauth.Identity{ID: "pwd_" + accountID, Type: "password", Username: username, Email: email, PasswordHash: hash, Enabled: true}
 		}
 		result.Accounts = append(result.Accounts, coreauth.Account{
-			ID: accountID, DisplayName: email, Enabled: true, Roles: []string{roleID}, Identities: []coreauth.Identity{identity}, CreatedAt: createdAt,
+			ID: accountID, DisplayName: username, Enabled: true, Roles: []string{roleID}, Identities: []coreauth.Identity{identity}, CreatedAt: createdAt,
 		})
 	}
 	return result, rows.Err()

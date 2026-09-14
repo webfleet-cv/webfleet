@@ -94,7 +94,7 @@ func TestPendingPostgresChoiceHidesAdminEvenWhenAdminExists(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer st.Close()
-	if _, e := st.DB.Exec(`INSERT INTO users(email,password_hash,role,created_at) VALUES('admin@example.com','x','admin','2026-01-01T00:00:00Z')`); e != nil {
+	if _, e := st.DB.Exec(`INSERT INTO users(username,email,password_hash,role,created_at) VALUES('admin','admin@example.com','x','admin','2026-01-01T00:00:00Z')`); e != nil {
 		t.Fatal(e)
 	}
 	if e = config.SaveDatabaseChoice(dir, config.DatabaseChoice{Provider: "postgres", URL: "postgres://configured"}); e != nil {
