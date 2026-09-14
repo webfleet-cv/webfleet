@@ -824,6 +824,19 @@
       ]
     },
     {
+      "operation": "webfleet.service.api.cluster.v1.rpc.rotate-inbound",
+      "website": false,
+      "method": "POST",
+      "route": "/api/cluster/v1/rpc/rotate-inbound",
+      "cli_observed": false,
+      "boundary": "service",
+      "input_schema": "webfleet.service.api.cluster.v1.rpc.rotate-inbound.request.v1",
+      "output_schema": "webfleet.service.api.cluster.v1.rpc.rotate-inbound.response.v1",
+      "tests": [
+        "internal/server/cluster.go"
+      ]
+    },
+    {
       "operation": "webfleet.service.api.cluster.v1.rpc.summary.get",
       "website": false,
       "method": "GET",

@@ -2,11 +2,14 @@ package cluster
 
 import (
 	"context"
+	"crypto/hmac"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"testing"
+	"time"
 
 	core "github.com/gantry-tools/gantry-core/cluster"
 	"github.com/webfleet-cv/webfleet/internal/store"
@@ -120,6 +123,90 @@ func TestSignedTransport(t *testing.T) {
 		t.Fatalf("node=%s want=%s", got.NodeID, bi.NodeID)
 	}
 }
+func TestRotationCompletesWithPeerPendingPromotion(t *testing.T) {
+	ctx := context.Background()
+	_, a := openTest(t)
+	_, b := openTest(t)
+	ai, _ := a.EnsureIdentity(ctx, "1")
+	bi, _ := b.EnsureIdentity(ctx, "1")
+	ab, _ := core.NewSecret(32)
+	ba, _ := core.NewSecret(32)
+	bt := NewTransport(b.db, b, nil)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/cluster/v1/rpc/rotate-inbound":
+			body, _, err := bt.Authenticate(r, "cluster.health")
+			if err != nil {
+				http.Error(w, err.Error(), 401)
+				return
+			}
+			nodeID := r.Header.Get(core.HeaderNode)
+			var in struct {
+				SecretHash string `json:"secret_hash"`
+				ExpiresAt  string `json:"expires_at"`
+			}
+			if err := json.Unmarshal(body, &in); err != nil {
+				http.Error(w, "bad body", 400)
+				return
+			}
+			hash, err := base64.RawURLEncoding.DecodeString(in.SecretHash)
+			if err != nil {
+				http.Error(w, "bad hash", 400)
+				return
+			}
+			expiresAt, _ := time.Parse(time.RFC3339Nano, in.ExpiresAt)
+			if err := b.RotateInbound(r.Context(), nodeID, hash, expiresAt); err != nil {
+				http.Error(w, err.Error(), 409)
+				return
+			}
+			w.WriteHeader(200)
+		case "/api/cluster/v1/rpc/summary":
+			if _, _, err := bt.Authenticate(r, "cluster.webfleet.summary"); err != nil {
+				http.Error(w, err.Error(), 401)
+				return
+			}
+			v, err := b.LocalSummary(r.Context())
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(v)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	bi.PublicEndpoint = srv.URL
+	ai.PublicEndpoint = "https://a.example"
+	if err := a.AddMember(ctx, bi, ab, ba); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.AddMember(ctx, ai, ba, ab); err != nil {
+		t.Fatal(err)
+	}
+	at := NewTransport(a.db, a, srv.Client())
+	// The old A->B secret works before rotation.
+	if _, err := (RemoteReader{at}).Summary(ctx, bi.NodeID); err != nil {
+		t.Fatalf("summary before rotation: %v", err)
+	}
+	// Rotation coordinates with the peer and completes.
+	newSecret, err := a.Rotate(ctx, bi.NodeID, at)
+	if err != nil {
+		t.Fatalf("rotate: %v", err)
+	}
+	// The new secret is promoted on first use and the old secret is rejected.
+	if _, err := (RemoteReader{at}).Summary(ctx, bi.NodeID); err != nil {
+		t.Fatalf("summary after rotation with new credential: %v", err)
+	}
+	var inbound []byte
+	if err = b.db.QueryRowContext(ctx, `SELECT inbound_secret_hash FROM cluster_members WHERE node_id=?`, ai.NodeID).Scan(&inbound); err != nil {
+		t.Fatal(err)
+	}
+	if !hmac.Equal(inbound, core.SecretDigest(newSecret)) {
+		t.Fatal("peer did not promote the rotated credential")
+	}
+}
+
 func TestPolicyKeepsSecretsAndRuntimeLocal(t *testing.T) {
 	for _, name := range []string{"secrets", "scheduler.runtime", "browser.runtime"} {
 		p, ok := PolicyFor(name)

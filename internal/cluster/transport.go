@@ -3,6 +3,7 @@ package cluster
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -44,15 +45,27 @@ func (t *Transport) Authenticate(r *http.Request, capability string) ([]byte, st
 	}
 	var state, capsJSON string
 	var protocol int
-	var inbound []byte
-	if err = t.db.QueryRowContext(r.Context(), `SELECT state,protocol_version,capabilities_json,inbound_secret_hash FROM cluster_members WHERE node_id=?`, env.NodeID).Scan(&state, &protocol, &capsJSON, &inbound); err != nil {
+	var inbound, pendingInbound []byte
+	var pendingExpires sql.NullString
+	if err = t.db.QueryRowContext(r.Context(), `SELECT state,protocol_version,capabilities_json,inbound_secret_hash,pending_inbound_secret_hash,pending_inbound_expires_at FROM cluster_members WHERE node_id=?`, env.NodeID).Scan(&state, &protocol, &capsJSON, &inbound, &pendingInbound, &pendingExpires); err != nil {
 		return nil, "", errors.New("cluster member unavailable")
 	}
 	var caps []string
 	_ = json.Unmarshal([]byte(capsJSON), &caps)
-	_, err = core.VerifyIncoming(core.VerifyRequestInput{Material: core.AuthMaterial{State: state, Protocol: protocol, Capabilities: caps, CurrentHash: inbound}, RequiredCapability: capability, PresentedSecret: secret, Method: r.Method, RequestURI: r.URL.RequestURI(), Envelope: env, Body: body, Now: t.now().UTC()})
+	var pendingExpiry *time.Time
+	if pendingExpires.Valid {
+		if parsed, parseErr := time.Parse(time.RFC3339Nano, pendingExpires.String); parseErr == nil {
+			pendingExpiry = &parsed
+		}
+	}
+	verified, err := core.VerifyIncoming(core.VerifyRequestInput{Material: core.AuthMaterial{State: state, Protocol: protocol, Capabilities: caps, CurrentHash: inbound, PendingHash: pendingInbound, PendingExpires: pendingExpiry}, RequiredCapability: capability, PresentedSecret: secret, Method: r.Method, RequestURI: r.URL.RequestURI(), Envelope: env, Body: body, Now: t.now().UTC()})
 	if err != nil {
 		return nil, "", err
+	}
+	if verified.PromotePending {
+		if _, err = t.db.ExecContext(r.Context(), `UPDATE cluster_members SET inbound_secret_hash=pending_inbound_secret_hash,pending_inbound_secret_hash=NULL,pending_inbound_expires_at=NULL,credential_version=credential_version+1 WHERE node_id=?`, env.NodeID); err != nil {
+			return nil, "", err
+		}
 	}
 	_, _ = t.db.ExecContext(r.Context(), `DELETE FROM cluster_nonces WHERE seen_at<?`, t.now().UTC().Add(-2*core.ClockSkew).Format(time.RFC3339Nano))
 	if _, err = t.db.ExecContext(r.Context(), `INSERT INTO cluster_nonces(node_id,nonce,seen_at) VALUES(?,?,?)`, env.NodeID, env.Nonce, t.now().UTC().Format(time.RFC3339Nano)); err != nil {

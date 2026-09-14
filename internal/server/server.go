@@ -281,6 +281,7 @@ func OperationRouteInventory() []OperationRoute {
 		OperationRoute{Method: "GET", Path: "/api/cluster/v1/rpc/compare", Service: true},
 		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/propagation/preview", Service: true},
 		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/propagation/apply", Service: true},
+		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/rotate-inbound", Service: true},
 	)
 	return out
 }
@@ -296,6 +297,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/cluster/v1/rpc/compare", s.handleClusterRPCCompare)
 	s.mux.HandleFunc("POST /api/cluster/v1/rpc/propagation/preview", s.handlePropagationRPCPreview)
 	s.mux.HandleFunc("POST /api/cluster/v1/rpc/propagation/apply", s.handlePropagationRPCApply)
+	s.mux.HandleFunc("POST /api/cluster/v1/rpc/rotate-inbound", s.handleClusterRPCRotateInbound)
 	for _, def := range apiRouteDefs {
 		pattern := def.method + " " + def.path
 		h := def.build(s)

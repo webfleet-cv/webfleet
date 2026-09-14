@@ -117,6 +117,7 @@ var specs = []spec{
 	{"webfleet.service.api.cluster.v1.rpc.compare.get", "GET", "/api/cluster/v1/rpc/compare", "", "", "", "internal/cluster/cluster_test.go", operation.Read, operation.Service, nil, operation.ServiceProtocol, false, nil},
 	{"webfleet.service.api.cluster.v1.rpc.propagation.preview", "POST", "/api/cluster/v1/rpc/propagation/preview", "", "", "", "internal/server/propagation.go", operation.Read, operation.Service, nil, operation.ServiceProtocol, false, nil},
 	{"webfleet.service.api.cluster.v1.rpc.propagation.apply", "POST", "/api/cluster/v1/rpc/propagation/apply", "", "", "", "internal/server/propagation.go", operation.Mutation, operation.Service, nil, operation.ServiceProtocol, false, nil},
+	{"webfleet.service.api.cluster.v1.rpc.rotate-inbound", "POST", "/api/cluster/v1/rpc/rotate-inbound", "", "", "", "internal/server/cluster.go", operation.Mutation, operation.Service, nil, operation.ServiceProtocol, false, nil},
 }
 
 var Contracts = buildContracts()

@@ -129,7 +129,7 @@ func runCluster(args []string) int {
 			return 2
 		}
 		if args[0] == "rotate" {
-			secret, e := svc.Rotate(ctx, *id)
+			secret, e := svc.Rotate(ctx, *id, transport)
 			if e == nil {
 				if *secretFile == "" {
 					e = errors.New("--secret-file is required for rotate")

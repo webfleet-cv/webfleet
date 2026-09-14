@@ -1,9 +1,13 @@
 package server
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	core "github.com/gantry-tools/gantry-core/cluster"
 	clusterapi "github.com/webfleet-cv/webfleet/internal/cluster"
@@ -142,7 +146,7 @@ func (s *Server) handleClusterMemberAction(w http.ResponseWriter, r *http.Reques
 		err = s.cluster.Remove(r.Context(), id)
 	case "rotate":
 		var secret string
-		secret, err = s.cluster.Rotate(r.Context(), id)
+		secret, err = s.cluster.Rotate(r.Context(), id, s.clusterTransport)
 		value = map[string]string{"credential": secret}
 	default:
 		writeError(w, 404, "unknown cluster action")
@@ -230,4 +234,40 @@ func (s *Server) handleClusterRPCCompare(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, 200, v)
+}
+
+// handleClusterRPCRotateInbound installs a pending inbound credential for the
+// calling member during a peer-initiated rotation. The request is
+// authenticated with the current credential, so an unauthenticated caller
+// cannot overwrite a member's rotation state.
+func (s *Server) handleClusterRPCRotateInbound(w http.ResponseWriter, r *http.Request) {
+	body, _, err := s.clusterTransport.Authenticate(r, "cluster.health")
+	if err != nil {
+		writeError(w, 401, err.Error())
+		return
+	}
+	nodeID := r.Header.Get(core.HeaderNode)
+	var in struct {
+		SecretHash string `json:"secret_hash"`
+		ExpiresAt  string `json:"expires_at"`
+	}
+	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&in); err != nil {
+		writeError(w, 400, "invalid rotation payload")
+		return
+	}
+	hash, err := base64.RawURLEncoding.DecodeString(in.SecretHash)
+	if err != nil || len(hash) != sha256.Size {
+		writeError(w, 400, "invalid credential digest")
+		return
+	}
+	expiresAt, err := time.Parse(time.RFC3339Nano, in.ExpiresAt)
+	if err != nil {
+		writeError(w, 400, "invalid rotation expiry")
+		return
+	}
+	if err := s.cluster.RotateInbound(r.Context(), nodeID, hash, expiresAt); err != nil {
+		writeError(w, 409, err.Error())
+		return
+	}
+	w.WriteHeader(200)
 }

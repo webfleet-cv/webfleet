@@ -7,6 +7,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -242,10 +245,29 @@ func (s *Service) Remove(ctx context.Context, id string) error {
 	}
 	return nil
 }
-func (s *Service) Rotate(ctx context.Context, id string) (string, error) {
+func (s *Service) Rotate(ctx context.Context, id string, transport *Transport) (string, error) {
 	sec, err := core.NewSecret(core.MinimumCredentialBytes)
 	if err != nil {
 		return "", err
+	}
+	// The peer must accept the new A->B secret or the pair breaks: rotate the
+	// peer's inbound credential to a pending replacement first (authenticated
+	// with the current secret), then switch our outbound secret. The peer
+	// promotes the pending credential on first use; the old credential remains
+	// valid during the overlap.
+	if transport == nil {
+		return "", errors.New("cluster transport required for rotation")
+	}
+	hash := core.SecretDigest(sec)
+	body, _ := json.Marshal(map[string]string{"secret_hash": base64.RawURLEncoding.EncodeToString(hash), "expires_at": s.now().UTC().Add(15 * time.Minute).Format(time.RFC3339Nano)})
+	resp, err := transport.Do(ctx, id, http.MethodPost, "/api/cluster/v1/rpc/rotate-inbound", "cluster.health", body)
+	if err != nil {
+		return "", fmt.Errorf("peer did not accept the rotation: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return "", fmt.Errorf("peer rejected the inbound rotation (%d): %s", resp.StatusCode, strings.TrimSpace(string(raw)))
 	}
 	r, err := s.db.ExecContext(ctx, `UPDATE cluster_members SET outbound_secret=?,credential_version=credential_version+1 WHERE node_id=? AND state=?`, sec, id, core.MemberActive)
 	if err != nil {
@@ -256,6 +278,23 @@ func (s *Service) Rotate(ctx context.Context, id string) (string, error) {
 		return "", errors.New("cluster member unavailable")
 	}
 	return sec, nil
+}
+
+// RotateInbound installs a pending inbound credential for a member. It is
+// invoked by the peer through the cluster RPC during rotation: the caller has
+// already switched its outbound secret, and this node accepts requests signed
+// with either the current or the pending credential until the pending one is
+// used and promoted.
+func (s *Service) RotateInbound(ctx context.Context, nodeID string, hash []byte, expiresAt time.Time) error {
+	r, err := s.db.ExecContext(ctx, `UPDATE cluster_members SET pending_inbound_secret_hash=?,pending_inbound_expires_at=? WHERE node_id=? AND state=?`, hash, expiresAt.UTC().Format(time.RFC3339Nano), nodeID, core.MemberActive)
+	if err != nil {
+		return err
+	}
+	n, _ := r.RowsAffected()
+	if n != 1 {
+		return errors.New("cluster member unavailable")
+	}
+	return nil
 }
 func (s *Service) LocalSummary(ctx context.Context) (Summary, error) {
 	i, err := s.EnsureIdentity(ctx, "")
