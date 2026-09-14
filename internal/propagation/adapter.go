@@ -133,7 +133,10 @@ func (a *Adapter) Export(ctx context.Context, kinds []string, actor core.Actor, 
 		if out[i].Kind == out[j].Kind {
 			return out[i].ID < out[j].ID
 		}
-		return out[i].Kind < out[j].Kind
+		// Request definitions (sites) must be applied before the monitors that
+		// depend on them so a bundle that creates a site and its monitors
+		// satisfies the monitors.site_id foreign key on the destination.
+		return out[i].Kind > out[j].Kind
 	})
 	return out, nil
 }
@@ -159,6 +162,16 @@ func (a *Adapter) TargetState(ctx context.Context, src []core.Envelope, actor co
 		existing[k] = v.Existing
 		if v.Existing.Kind == "request-definition" {
 			deps["site:"+v.Existing.ID] = true
+		}
+	}
+	// A monitor envelope depends on the site it belongs to. When the site is
+	// created by the same bundle (bootstrap/reconciliation of a new site), the
+	// dependency must be resolvable from the source batch itself, not only from
+	// the destination's current state, otherwise a fresh member can never accept
+	// a site together with its monitors.
+	for _, e := range src {
+		if e.Kind == "request-definition" {
+			deps["site:"+e.ID] = true
 		}
 	}
 	perms := map[string]bool{}
