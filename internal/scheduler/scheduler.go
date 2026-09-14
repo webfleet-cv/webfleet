@@ -199,7 +199,17 @@ func (s *Scheduler) renewLoop(ctx context.Context, cancel context.CancelFunc, ki
 				return
 			case <-t.C:
 				ok, err := s.store.RenewClaim(ctx, kind, id, s.owner, gen, time.Now().UTC().Add(ttl))
-				if err != nil || !ok {
+				if err != nil {
+					// A transient store failure is not ownership loss: aborting
+					// the in-flight check would silently skip this interval's
+					// work (CompleteClaim still advances next_due_at because it
+					// matches owner+generation). If another worker genuinely
+					// took over, the lease expires naturally and the owner+generation
+					// guard fences the stale worker from completing the claim.
+					s.log.Warn("claim renewal lookup failed", "kind", kind, "site_id", id, "error", err)
+					continue
+				}
+				if !ok {
 					cancel()
 					return
 				}
