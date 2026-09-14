@@ -77,11 +77,24 @@ func (s *Service) EnsureIdentity(ctx context.Context, productVersion string) (co
 	}
 	pub, _ = base64.RawURLEncoding.DecodeString(g.Identity.PublicKey)
 	capsB, _ := json.Marshal(g.Identity.Capabilities)
-	_, err = s.db.ExecContext(ctx, `INSERT INTO cluster_identity(singleton,node_id,installation_id,public_key,private_key,capabilities_json,protocol_version,product_version,created_at) VALUES(1,?,?,?,?,?,?,?,?)`, g.Identity.NodeID, g.Identity.InstallationID, pub, []byte(ed25519.PrivateKey(g.PrivateKey)), string(capsB), ProtocolVersion, productVersion, g.Identity.CreatedAt.Format(time.RFC3339Nano))
+	_, err = s.db.ExecContext(ctx, `INSERT INTO cluster_identity(singleton,node_id,installation_id,public_key,private_key,capabilities_json,protocol_version,product_version,created_at) VALUES(1,?,?,?,?,?,?,?,?) ON CONFLICT(singleton) DO NOTHING`, g.Identity.NodeID, g.Identity.InstallationID, pub, []byte(ed25519.PrivateKey(g.PrivateKey)), string(capsB), ProtocolVersion, productVersion, g.Identity.CreatedAt.Format(time.RFC3339Nano))
 	if err != nil {
 		return core.Identity{}, err
 	}
-	return g.Identity, nil
+	// A concurrent first-run call may have created the identity between our read
+	// and insert; re-read so both callers converge on the single canonical row
+	// instead of the loser surfacing a unique-constraint error.
+	var canonical core.Identity
+	var cPub, cPriv []byte
+	var cCaps, cCreated string
+	err = s.db.QueryRowContext(ctx, `SELECT node_id,installation_id,display_name,public_endpoint,public_key,private_key,capabilities_json,protocol_version,product_version,created_at FROM cluster_identity WHERE singleton=1`).Scan(&canonical.NodeID, &canonical.InstallationID, &canonical.DisplayName, &canonical.PublicEndpoint, &cPub, &cPriv, &cCaps, &canonical.ProtocolVersion, &canonical.ProductVersion, &cCreated)
+	if err != nil {
+		return core.Identity{}, err
+	}
+	canonical.PublicKey = base64.RawURLEncoding.EncodeToString(cPub)
+	_ = json.Unmarshal([]byte(cCaps), &canonical.Capabilities)
+	canonical.CreatedAt, _ = time.Parse(time.RFC3339Nano, cCreated)
+	return canonical, nil
 }
 func (s *Service) UpdateIdentity(ctx context.Context, name, endpoint, version string) (core.Identity, error) {
 	if endpoint != "" && !strings.HasPrefix(endpoint, "https://") {

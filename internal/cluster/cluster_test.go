@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -50,6 +51,44 @@ func TestIdentityAndInvitationLifecycle(t *testing.T) {
 	}
 	if _, err = a.Pair(ctx, token, bi); err == nil {
 		t.Fatal("invitation replay accepted")
+	}
+}
+
+func TestConcurrentEnsureIdentityConvergesOnOneNode(t *testing.T) {
+	_, svc := openTest(t)
+	ctx := context.Background()
+	const callers = 16
+	results := make(chan core.Identity, callers)
+	errors := make(chan error, callers)
+	var wg sync.WaitGroup
+	for i := 0; i < callers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			id, err := svc.EnsureIdentity(ctx, "test")
+			if err != nil {
+				errors <- err
+				return
+			}
+			results <- id
+		}()
+	}
+	wg.Wait()
+	close(results)
+	close(errors)
+	for err := range errors {
+		t.Fatalf("concurrent EnsureIdentity failed: %v", err)
+	}
+	seen := map[string]bool{}
+	for id := range results {
+		seen[id.NodeID] = true
+	}
+	if len(seen) != 1 {
+		t.Fatalf("concurrent first-run produced %d distinct identities, want 1", len(seen))
+	}
+	var rows int
+	if err := svc.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM cluster_identity`).Scan(&rows); err != nil || rows != 1 {
+		t.Fatalf("cluster_identity rows=%d err=%v", rows, err)
 	}
 }
 func TestThreeNodeAggregationReportsPartialFailure(t *testing.T) {
