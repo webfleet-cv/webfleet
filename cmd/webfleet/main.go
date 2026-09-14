@@ -64,7 +64,7 @@ func main() {
 		return
 	}
 	if len(os.Args) >= 2 && functionalCLIResource(os.Args[1]) {
-		os.Exit(automation.Run(os.Args[1:], operations.Contracts, automation.Options{Program: "webfleet", DefaultURL: "http://127.0.0.1:7336", CookieName: "webfleet_session", CSRFHeader: "X-Webfleet-CSRF", CSRFFields: []string{"csrf"}, SessionInfoPath: "/api/session"}))
+		os.Exit(automation.Run(os.Args[1:], operations.Contracts, automation.Options{Program: "webfleet", DefaultURL: "http://127.0.0.1:7336", CookieName: "webfleet_session", CSRFHeader: server.CSRFHeader, CSRFFields: []string{"csrf"}, SessionInfoPath: "/api/session"}))
 	}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	cfg, err := config.Load()

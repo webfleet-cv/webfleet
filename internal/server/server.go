@@ -56,6 +56,11 @@ type principal struct {
 	Role   string
 }
 
+// CSRFHeader is the single header every CSRF-protected surface (browser UI,
+// CLI automation, server validation) must agree on. The server validates it
+// here; consumers that send a different header can never pass a mutation.
+const CSRFHeader = "X-CSRF-Token"
+
 // handler is an authenticated handler signature. Unauthenticated routes are
 // registered with the same signature and ignore the empty principal.
 type handler func(http.ResponseWriter, *http.Request, principal)
@@ -344,7 +349,7 @@ func (s *Server) authorize(action string, csrf bool, tokenScopes []string, next 
 				writeError(w, 401, "authentication required")
 				return
 			}
-			if csrf && r.Header.Get("X-CSRF-Token") != sess.CSRF {
+			if csrf && r.Header.Get(CSRFHeader) != sess.CSRF {
 				writeError(w, 403, "invalid CSRF token")
 				return
 			}
