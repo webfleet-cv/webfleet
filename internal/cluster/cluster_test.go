@@ -144,7 +144,7 @@ func TestSignedTransport(t *testing.T) {
 		}
 		_ = json.NewEncoder(w).Encode(v)
 	}))
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 	bi.PublicEndpoint = srv.URL
 	ai.PublicEndpoint = "https://a.example"
 	if err := a.AddMember(ctx, bi, ab, ba); err != nil {
@@ -214,7 +214,7 @@ func TestRotationCompletesWithPeerPendingPromotion(t *testing.T) {
 			http.NotFound(w, r)
 		}
 	}))
-	defer srv.Close()
+	t.Cleanup(srv.Close)
 	bi.PublicEndpoint = srv.URL
 	ai.PublicEndpoint = "https://a.example"
 	if err := a.AddMember(ctx, bi, ab, ba); err != nil {
@@ -347,5 +347,165 @@ func TestCompatibleProductVersionsAndStandaloneRemoval(t *testing.T) {
 	local, err := a.LocalSummary(ctx)
 	if err != nil || local.NodeID != ai.NodeID {
 		t.Fatalf("standalone summary=%+v err=%v", local, err)
+	}
+}
+
+// rotationPeer is a two-node pair where A's rotate-inbound RPC to B is
+// controllable, so credential-rotation interruption boundaries are testable.
+type rotationPeer struct {
+	a, b *Service
+	ai   core.Identity
+	peer string
+	ab   string
+	at   *Transport
+}
+
+// twoNodeRotationHarness pairs node A and B behind a TLS peer whose rotate
+// behaviour is decided by rotateStatus (0 means accept and install the pending
+// credential).
+func twoNodeRotationHarness(t *testing.T, rotateStatus func() int) *rotationPeer {
+	t.Helper()
+	ctx := context.Background()
+	_, a := openTest(t)
+	_, b := openTest(t)
+	ai, _ := a.EnsureIdentity(ctx, "1")
+	bi, _ := b.EnsureIdentity(ctx, "1")
+	ab, _ := core.NewSecret(32)
+	ba, _ := core.NewSecret(32)
+	bt := NewTransport(b.db, b, nil)
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/cluster/v1/rpc/rotate-inbound":
+			body, _, err := bt.Authenticate(r, "cluster.health")
+			if err != nil {
+				http.Error(w, err.Error(), 401)
+				return
+			}
+			if status := rotateStatus(); status != http.StatusOK {
+				http.Error(w, "injected rotate failure", status)
+				return
+			}
+			nodeID := r.Header.Get(core.HeaderNode)
+			var in struct {
+				SecretHash string `json:"secret_hash"`
+				ExpiresAt  string `json:"expires_at"`
+			}
+			if err := json.Unmarshal(body, &in); err != nil {
+				http.Error(w, "bad body", 400)
+				return
+			}
+			hash, err := base64.RawURLEncoding.DecodeString(in.SecretHash)
+			if err != nil {
+				http.Error(w, "bad hash", 400)
+				return
+			}
+			expiresAt, _ := time.Parse(time.RFC3339Nano, in.ExpiresAt)
+			if err := b.RotateInbound(r.Context(), nodeID, hash, expiresAt); err != nil {
+				http.Error(w, err.Error(), 409)
+				return
+			}
+			w.WriteHeader(200)
+		case "/api/cluster/v1/rpc/summary":
+			if _, _, err := bt.Authenticate(r, "cluster.webfleet.summary"); err != nil {
+				http.Error(w, err.Error(), 401)
+				return
+			}
+			v, err := b.LocalSummary(r.Context())
+			if err != nil {
+				http.Error(w, err.Error(), 500)
+				return
+			}
+			_ = json.NewEncoder(w).Encode(v)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	bi.PublicEndpoint = srv.URL
+	ai.PublicEndpoint = "https://a.example"
+	if err := a.AddMember(ctx, bi, ab, ba); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.AddMember(ctx, ai, ba, ab); err != nil {
+		t.Fatal(err)
+	}
+	return &rotationPeer{a: a, b: b, ai: ai, peer: bi.NodeID, ab: ab, at: NewTransport(a.db, a, srv.Client())}
+}
+
+func (p *rotationPeer) outboundSecret(t *testing.T) string {
+	t.Helper()
+	var secret string
+	if err := p.a.db.QueryRowContext(context.Background(), `SELECT outbound_secret FROM cluster_members WHERE node_id=?`, p.peer).Scan(&secret); err != nil {
+		t.Fatal(err)
+	}
+	return secret
+}
+
+func (p *rotationPeer) summaryWorks(t *testing.T) error {
+	t.Helper()
+	_, err := (RemoteReader{p.at}).Summary(context.Background(), p.peer)
+	return err
+}
+
+// TestRotationBoundaryPeerRejectsPending proves that when the peer refuses the
+// pending credential, the local outbound secret is unchanged and the pair keeps
+// working with the old credential.
+func TestRotationBoundaryPeerRejectsPending(t *testing.T) {
+	p := twoNodeRotationHarness(t, func() int { return http.StatusInternalServerError })
+	if _, err := p.a.Rotate(context.Background(), p.peer, p.at); err == nil {
+		t.Fatal("rotation with a rejecting peer succeeded")
+	}
+	if got := p.outboundSecret(t); got != p.ab {
+		t.Fatalf("local outbound changed despite peer rejection: got=%q want=%q", got, p.ab)
+	}
+	if err := p.summaryWorks(t); err != nil {
+		t.Fatalf("pair broken after rejected rotation: %v", err)
+	}
+}
+
+// TestRotationBoundaryPendingInstalledBeforeLocalSwitch proves that after the
+// peer accepts a pending credential but before the local side switches, the old
+// credential still authenticates (the overlap window is safe).
+func TestRotationBoundaryPendingInstalledBeforeLocalSwitch(t *testing.T) {
+	p := twoNodeRotationHarness(t, func() int { return http.StatusOK })
+	newSecret, _ := core.NewSecret(32)
+	if err := p.b.RotateInbound(context.Background(), p.ai.NodeID, core.SecretDigest(newSecret), time.Now().UTC().Add(15*time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	// The local side never switched: the old secret must still work at the peer.
+	if got := p.outboundSecret(t); got != p.ab {
+		t.Fatalf("local outbound changed without a rotation: %q", got)
+	}
+	if err := p.summaryWorks(t); err != nil {
+		t.Fatalf("old credential rejected while a pending rotation was installed: %v", err)
+	}
+}
+
+// TestRotationBoundaryPendingExpiryKeepsPairUsable proves that when the pending
+// replacement expires before it is promoted, the retained previous-secret
+// overlap keeps the pair usable and a re-rotation installs a fresh pending
+// window and recovers the rotation.
+func TestRotationBoundaryPendingExpiryProvesRecovery(t *testing.T) {
+	p := twoNodeRotationHarness(t, func() int { return http.StatusOK })
+	if _, err := p.a.Rotate(context.Background(), p.peer, p.at); err != nil {
+		t.Fatalf("rotate: %v", err)
+	}
+	if got := p.outboundSecret(t); got == p.ab {
+		t.Fatal("rotation did not switch the local outbound secret")
+	}
+	// Promote nothing; expire the pending window on the peer. The pair must stay
+	// usable through the previous-secret overlap instead of being stranded.
+	if _, err := p.b.db.ExecContext(context.Background(), `UPDATE cluster_members SET pending_inbound_expires_at=? WHERE node_id=?`, time.Now().UTC().Add(-time.Minute).Format(time.RFC3339Nano), p.ai.NodeID); err != nil {
+		t.Fatal(err)
+	}
+	if err := p.summaryWorks(t); err != nil {
+		t.Fatalf("pair stranded after pending expiry: %v", err)
+	}
+	// A re-rotation installs a fresh pending window and completes.
+	if _, err := p.a.Rotate(context.Background(), p.peer, p.at); err != nil {
+		t.Fatalf("re-rotate after expiry: %v", err)
+	}
+	if err := p.summaryWorks(t); err != nil {
+		t.Fatalf("pair did not recover after re-rotation: %v", err)
 	}
 }

@@ -271,6 +271,10 @@ func (s *Service) Rotate(ctx context.Context, id string, transport *Transport) (
 	if transport == nil {
 		return "", errors.New("cluster transport required for rotation")
 	}
+	var current string
+	if err = s.db.QueryRowContext(ctx, `SELECT outbound_secret FROM cluster_members WHERE node_id=?`, id).Scan(&current); err != nil {
+		return "", errors.New("cluster member unavailable")
+	}
 	hash := core.SecretDigest(sec)
 	body, _ := json.Marshal(map[string]string{"secret_hash": base64.RawURLEncoding.EncodeToString(hash), "expires_at": s.now().UTC().Add(15 * time.Minute).Format(time.RFC3339Nano)})
 	resp, err := transport.Do(ctx, id, http.MethodPost, "/api/cluster/v1/rpc/rotate-inbound", "cluster.health", body)
@@ -282,7 +286,11 @@ func (s *Service) Rotate(ctx context.Context, id string, transport *Transport) (
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
 		return "", fmt.Errorf("peer rejected the inbound rotation (%d): %s", resp.StatusCode, strings.TrimSpace(string(raw)))
 	}
-	r, err := s.db.ExecContext(ctx, `UPDATE cluster_members SET outbound_secret=?,credential_version=credential_version+1 WHERE node_id=? AND state=?`, sec, id, core.MemberActive)
+	// Retain the previous outbound secret as an overlap so the pair keeps
+	// working with the old credential if the pending window expires before the
+	// new one is confirmed; the transport drops the overlap once the peer
+	// accepts the new credential.
+	r, err := s.db.ExecContext(ctx, `UPDATE cluster_members SET outbound_secret=?,previous_outbound_secret=? WHERE node_id=? AND state=?`, sec, current, id, core.MemberActive)
 	if err != nil {
 		return "", err
 	}

@@ -21,7 +21,7 @@ type Store struct {
 	path string
 }
 
-const schemaVersion = 37
+const schemaVersion = 38
 
 type migration struct {
 	version int
@@ -212,6 +212,9 @@ var migrations = []migration{
 	{37, "cluster pending inbound rotation", []string{
 		`ALTER TABLE cluster_members ADD COLUMN pending_inbound_secret_hash BLOB`,
 		`ALTER TABLE cluster_members ADD COLUMN pending_inbound_expires_at TEXT`,
+	}},
+	{38, "cluster outbound rotation overlap", []string{
+		`ALTER TABLE cluster_members ADD COLUMN previous_outbound_secret TEXT`,
 	}},
 }
 

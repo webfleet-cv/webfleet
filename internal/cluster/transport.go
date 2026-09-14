@@ -75,9 +75,9 @@ func (t *Transport) Authenticate(r *http.Request, capability string) ([]byte, st
 	return body, env.RequestID, nil
 }
 func (t *Transport) Do(ctx context.Context, nodeID, method, path, capability string, body []byte) (*http.Response, error) {
-	var endpoint, secret, state string
+	var endpoint, secret, previous, state string
 	var protocol int
-	if err := t.db.QueryRowContext(ctx, `SELECT public_endpoint,outbound_secret,state,protocol_version FROM cluster_members WHERE node_id=?`, nodeID).Scan(&endpoint, &secret, &state, &protocol); err != nil {
+	if err := t.db.QueryRowContext(ctx, `SELECT public_endpoint,outbound_secret,COALESCE(previous_outbound_secret,''),state,protocol_version FROM cluster_members WHERE node_id=?`, nodeID).Scan(&endpoint, &secret, &previous, &state, &protocol); err != nil {
 		return nil, err
 	}
 	if state != core.MemberActive || protocol != core.ProtocolVersion {
@@ -90,22 +90,49 @@ func (t *Transport) Do(ctx context.Context, nodeID, method, path, capability str
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path
 	}
-	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(endpoint, "/")+path, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
+	target := strings.TrimRight(endpoint, "/") + path
 	local, err := t.identity.EnsureIdentity(ctx, "")
 	if err != nil {
 		return nil, err
 	}
-	nonce, _ := core.NewSecret(18)
-	rid, _ := core.NewID("req_", 12)
-	core.WriteEnvelope(req.Header, local.NodeID, secret, method, req.URL.RequestURI(), capability, core.ProtocolVersion, body, t.now().UTC(), nonce, rid)
-	req.Header.Set("Authorization", "Bearer "+secret)
+	send := func(credential string) (*http.Response, error) {
+		req, err := http.NewRequestWithContext(ctx, method, target, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		nonce, _ := core.NewSecret(18)
+		rid, _ := core.NewID("req_", 12)
+		core.WriteEnvelope(req.Header, local.NodeID, credential, method, req.URL.RequestURI(), capability, core.ProtocolVersion, body, t.now().UTC(), nonce, rid)
+		req.Header.Set("Authorization", "Bearer "+credential)
+		req.Header.Set("Content-Type", "application/json")
+		return t.client.Do(req)
+	}
 	started := t.now()
-	resp, err := t.client.Do(req)
+	resp, err := send(secret)
+	// During a rotation overlap the peer still accepts the previous credential
+	// until the pending replacement is used and promoted. If the current
+	// credential is rejected and an overlap is retained, retry with the
+	// previous secret so an expired or unconfirmed rotation never strands the
+	// pair.
+	if err == nil && previous != "" && previous != secret && (resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
+		resp.Body.Close()
+		resp, err = send(previous)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode < 400 {
+			_, _ = t.db.ExecContext(ctx, `UPDATE cluster_members SET last_seen_at=?,last_latency_ms=? WHERE node_id=?`, t.now().UTC().Format(time.RFC3339Nano), t.now().Sub(started).Milliseconds(), nodeID)
+		}
+		return resp, nil
+	}
 	if err == nil {
-		_, _ = t.db.ExecContext(ctx, `UPDATE cluster_members SET last_seen_at=?,last_latency_ms=? WHERE node_id=?`, t.now().UTC().Format(time.RFC3339Nano), t.now().Sub(started).Milliseconds(), nodeID)
+		if resp.StatusCode < 400 && previous != "" {
+			// The current credential was accepted, so the peer promoted the
+			// pending replacement; the overlap is no longer needed.
+			_, _ = t.db.ExecContext(ctx, `UPDATE cluster_members SET previous_outbound_secret=NULL,last_seen_at=?,last_latency_ms=? WHERE node_id=?`, t.now().UTC().Format(time.RFC3339Nano), t.now().Sub(started).Milliseconds(), nodeID)
+		} else {
+			_, _ = t.db.ExecContext(ctx, `UPDATE cluster_members SET last_seen_at=?,last_latency_ms=? WHERE node_id=?`, t.now().UTC().Format(time.RFC3339Nano), t.now().Sub(started).Milliseconds(), nodeID)
+		}
 	}
 	return resp, err
 }
