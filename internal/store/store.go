@@ -277,7 +277,10 @@ func OpenPostgres(ctx context.Context, dsn string) (*Store, error) {
 func postgresSQL(q string) string {
 	q = strings.ReplaceAll(q, "INTEGER PRIMARY KEY", "SERIAL PRIMARY KEY")
 	q = strings.ReplaceAll(q, " BLOB ", " BYTEA ")
+	q = strings.ReplaceAll(q, " BLOB", " BYTEA")
+	q = strings.ReplaceAll(q, "BLOB ", "BYTEA ")
 	q = strings.ReplaceAll(q, "datetime('now')", "CURRENT_TIMESTAMP")
+	q = strings.ReplaceAll(q, "instr(email,'@')", "position('@' in email)")
 	q = strings.ReplaceAll(q, "CURRENT_TIMESTAMP", "CURRENT_TIMESTAMP::text")
 	return q
 }
