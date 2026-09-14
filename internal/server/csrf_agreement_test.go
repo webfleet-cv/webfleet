@@ -44,3 +44,23 @@ func TestCSRFHeaderAgreementAcrossSurfaces(t *testing.T) {
 		t.Fatalf("public/manage.js is out of sync with the embedded web/manage.js")
 	}
 }
+
+// TestApplicationNavigationHasNoCrossSiteLink is a regression test for a
+// dogfooding-discovered defect: a request to add Gantry to the public-facing
+// websites leaked a hard-coded https://gantry.cv link into the authenticated
+// application navigation. The application menu must only carry application
+// routes, never unsolicited cross-site branding.
+func TestApplicationNavigationHasNoCrossSiteLink(t *testing.T) {
+	f, err := embedded.Open("web/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := io.ReadAll(f)
+	f.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(b), "gantry.cv") {
+		t.Fatal("application frontend contains a hard-coded gantry.cv cross-site link; remove it from the Nift source and regenerate")
+	}
+}
