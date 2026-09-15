@@ -4,6 +4,17 @@
 
 Webfleet follows `gantry-core/docs/CLI_API_CLUSTER_ROADMAP.md`. Phase 1 CP8 adopts the v0.1.1 contract for site listing, creation and archival. Its CLI names are reserved, not marked implemented; Phase 5 must wire and runtime-observe them before executable coverage is advertised.
 
+### Distributed campaign conclusions (September 2026)
+
+The four-node dogfood campaigns validated the **shared-PostgreSQL multi-worker**
+scheduling model: `scheduler_claims` lease + generation fencing, worker
+failure/takeover with no duplicate committed checks, fail-closed behaviour when
+PostgreSQL is unavailable (checks pause and are missed, not buffered), and
+automatic recovery with new claim generations. This is shared-database
+coordination, not peer clustering. Crawl monitoring was exercised; there is no
+distinct DNS monitor type; monitor CRUD is API/browser-only (no CLI parity).
+See `docs/cluster-policy.md` for the durable architecture contract.
+
 ## Frontend asset ownership
 
 Nift tracks and builds HTML pages only. CSS, JavaScript, images, icons and other
