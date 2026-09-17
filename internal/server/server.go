@@ -283,7 +283,7 @@ type OperationRoute struct {
 // including the node-only cluster transport endpoints registered beside the
 // human API table.
 func OperationRouteInventory() []OperationRoute {
-	out := make([]OperationRoute, 0, len(apiRouteDefs)+6)
+	out := make([]OperationRoute, 0, len(apiRouteDefs)+8)
 	for _, d := range apiRouteDefs {
 		out = append(out, OperationRoute{Method: d.method, Path: d.path, Action: d.action, CSRF: d.csrf, TokenScopes: append([]string(nil), d.tokenScopes...)})
 	}
@@ -295,6 +295,7 @@ func OperationRouteInventory() []OperationRoute {
 		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/propagation/preview", Service: true},
 		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/propagation/apply", Service: true},
 		OperationRoute{Method: "POST", Path: "/api/cluster/v1/rpc/rotate-inbound", Service: true},
+		OperationRoute{Method: "POST", Path: "/api/cluster/v1/replication/propose", Service: true},
 	)
 	return out
 }
