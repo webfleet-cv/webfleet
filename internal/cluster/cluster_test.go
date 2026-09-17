@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
@@ -532,5 +533,17 @@ func TestEligibleVoterPreventsUnpairedAndInactiveAdmission(t *testing.T) {
 	}
 	if err := a.EligibleVoter(ctx, bi.NodeID); err == nil {
 		t.Fatal("revoked peer must be rejected before AddVoter")
+	}
+}
+
+func TestTransportRejectsOversizedRequest(t *testing.T) {
+	st, _ := openTest(t)
+	svc := New(st.DB)
+	tr := NewTransport(st.DB, svc, nil)
+	big := make([]byte, 2<<20) // exceeds core.MaxRequestBytes
+	req := httptest.NewRequest("POST", "/api/cluster/v1/replication/propose", bytes.NewReader(big))
+	req.Header.Set("Content-Type", "application/json")
+	if _, _, e := tr.Authenticate(req, "replication"); e == nil {
+		t.Fatal("oversized cluster request must be rejected")
 	}
 }

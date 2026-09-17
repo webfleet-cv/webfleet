@@ -159,3 +159,30 @@ func TestFSMRejectsUnsupportedKindAndVersion(t *testing.T) {
 		t.Fatal("malformed group payload must fail closed")
 	}
 }
+
+func TestFSMSiteDeleteCascadesLocalDependentRows(t *testing.T) {
+	f, st := testFSM(t)
+	g := GroupPayload{ClusterID: "wfg_d", OrgID: 1, Name: "D", CreatedAt: "2026-09-18T00:00:00Z"}
+	if err := apply(t, f, 1, op(t, "op-g", KindGroupPut, g.ClusterID, g)); err != nil {
+		t.Fatal(err)
+	}
+	s := SitePayload{ClusterID: "wfs_d", OrgID: 1, Name: "D", PrimaryURL: "https://d.example", GroupClusterID: g.ClusterID, Enabled: true, CreatedAt: "2026-09-18T00:00:00Z", UpdatedAt: "2026-09-18T00:00:00Z"}
+	if err := apply(t, f, 2, op(t, "op-s", KindSitePut, s.ClusterID, s)); err != nil {
+		t.Fatal(err)
+	}
+	// Node-local monitoring history attached to the site.
+	if _, err := st.DB.Exec(`INSERT INTO check_results(site_id,monitor_id,ok,status_code,checked_at) SELECT s.id,m.id,1,200,'2026-09-18T00:00:00Z' FROM sites s JOIN monitors m ON m.site_id=s.id WHERE s.cluster_id='wfs_d'`); err != nil {
+		t.Fatal(err)
+	}
+	if err := apply(t, f, 3, op(t, "op-del", KindSiteDelete, s.ClusterID, map[string]bool{"delete": true})); err != nil {
+		t.Fatal(err)
+	}
+	var sites int
+	if err := st.DB.QueryRow(`SELECT COUNT(*) FROM sites WHERE cluster_id='wfs_d'`).Scan(&sites); err != nil || sites != 0 {
+		t.Fatalf("site not removed everywhere: %d", sites)
+	}
+	var results int
+	if err := st.DB.QueryRow(`SELECT COUNT(*) FROM check_results`).Scan(&results); err != nil || results != 0 {
+		t.Fatalf("delete did not follow dependent-data semantics: %d check_results remain", results)
+	}
+}
