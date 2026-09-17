@@ -225,7 +225,7 @@ func main() {
 		if tlsConfig != nil && tlsConfig.RootCAs != nil {
 			srv.SetClusterHTTPClient(&http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: tlsConfig.RootCAs, MinVersion: tls.VersionTLS12}}})
 		}
-		replicatedRuntime, e = replruntime.NewReplication(context.Background(), replruntime.ReplicationOptions{DB: st.DB, DataDir: cfg.DataDir, NodeID: cfg.Replication.NodeID, Address: cfg.Replication.Listen, Bootstrap: cfg.Replication.Bootstrap, TLS: tlsConfig, Insecure: cfg.Replication.InsecurePlaintext, Transport: srv.ClusterTransport(), Timing: corerepl.ProductionTiming()})
+		replicatedRuntime, e = replruntime.NewReplication(context.Background(), replruntime.ReplicationOptions{DB: st.DB.DB, DataDir: cfg.DataDir, NodeID: cfg.Replication.NodeID, Address: cfg.Replication.Listen, Bootstrap: cfg.Replication.Bootstrap, TLS: tlsConfig, Insecure: cfg.Replication.InsecurePlaintext, Transport: srv.ClusterTransport(), Timing: corerepl.ProductionTiming()})
 		if e != nil {
 			log.Error("replication initialization failed", "error", e)
 			os.Exit(1)
