@@ -319,6 +319,16 @@ func TestThreeNodeProductionCertification(t *testing.T) {
 	if !diverged {
 		t.Fatal("node-local monitoring observations unexpectedly identical")
 	}
+	// A node-local monitoring write must NOT advance the replicated applied index.
+	idxBefore, _ := b.rt.FSM.AppliedIndex()
+	if _, e := b.store.DB.Exec(`INSERT INTO check_results(site_id,monitor_id,ok,status_code,checked_at) SELECT s.id,m.id,1,200,'2026-09-18T00:00:00Z' FROM sites s JOIN monitors m ON m.site_id=s.id WHERE s.cluster_id='wfs_example'`); e != nil {
+		t.Fatal(e)
+	}
+	time.Sleep(500 * time.Millisecond)
+	idxAfter, _ := b.rt.FSM.AppliedIndex()
+	if idxAfter != idxBefore {
+		t.Fatalf("node-local monitoring advanced the applied index: before=%d after=%d", idxBefore, idxAfter)
+	}
 	for _, n := range all {
 		wfWaitCount(t, n, `SELECT COUNT(*) FROM sites WHERE cluster_id='wfs_example'`, 1)
 	}

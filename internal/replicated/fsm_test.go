@@ -146,3 +146,16 @@ func TestSnapshotRestorePreservesNodeLocalSiteConfiguration(t *testing.T) {
 		t.Fatal("snapshot restore destroyed node-local header expectation state")
 	}
 }
+
+func TestFSMRejectsUnsupportedKindAndVersion(t *testing.T) {
+	f, _ := testFSM(t)
+	if err := apply(t, f, 1, op(t, "op-unk", "webfleet.bogus", "x", map[string]any{})); err == nil {
+		t.Fatal("unsupported operation kind must fail closed")
+	} else if f.ApplyFailure() == nil {
+		t.Fatalf("unknown committed kind should be a corruption fence: %v", err)
+	}
+	f2, _ := testFSM(t)
+	if err := apply(t, f2, 1, op(t, "op-ver", KindGroupPut, "g", map[string]any{})); err == nil {
+		t.Fatal("malformed group payload must fail closed")
+	}
+}
