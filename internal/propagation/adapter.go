@@ -15,11 +15,18 @@ import (
 )
 
 type Adapter struct {
-	db  *store.Store
-	now func() time.Time
+	db         *store.Store
+	now        func() time.Time
+	replicated bool
 }
 
 func New(st *store.Store) *Adapter { return &Adapter{db: st, now: time.Now} }
+
+// NewReplicated returns an adapter that refuses propagation writes to fleet
+// topology owned by the Raft state machine. Monitor definitions remain node-local.
+func NewReplicated(st *store.Store) *Adapter {
+	return &Adapter{db: st, now: time.Now, replicated: true}
+}
 func (a *Adapter) Kinds() []core.KindDescriptor {
 	return []core.KindDescriptor{{Kind: "monitor-definition", Label: "Monitor definitions", SchemaVersion: 1, Reversible: true}, {Kind: "request-definition", Label: "Site/request definitions", SchemaVersion: 1, Reversible: true}}
 }
@@ -185,6 +192,9 @@ func (a *Adapter) TargetState(ctx context.Context, src []core.Envelope, actor co
 func (a *Adapter) Apply(ctx context.Context, e core.Envelope) (core.AppliedRevision, error) {
 	if err := ValidateEnvelope(e); err != nil {
 		return core.AppliedRevision{}, err
+	}
+	if a.replicated && e.Kind == "request-definition" {
+		return core.AppliedRevision{}, errors.New("site/request propagation is disabled while Raft replication owns fleet topology")
 	}
 	id, err := strconv.ParseInt(e.ID, 10, 64)
 	if err != nil {

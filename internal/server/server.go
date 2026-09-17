@@ -227,7 +227,11 @@ func New(cfg config.Config, st *store.Store, log *slog.Logger) *Server {
 	s := &Server{cfg: cfg, store: st, analytics: a, tokens: apitokens.New(st), audit: audit.NewWithOptions(st, audit.Options{Sandbox: cfg.AuditSandbox}), auth: auth.New(st), sites: sites.New(st), monitor: monitor.New(st), maintenance: maintenance.New(st), rbac: rbac.New(st), incidents: incidents.New(st), tls: tlshealth.New(st), dns: dnsobs.New(st), deployments: deployments.New(st), crawler: crawler.New(st), geo: geo.NewManager(cfg.DataDir, cfg.GeoIPURL), log: log, mux: http.NewServeMux(), proxy: requestmeta.Config{Trusted: cfg.TrustedProxies}, loginLim: newRateLimiter(time.Minute, 10, 10000), setupLim: newRateLimiter(time.Minute, 5, 1000), tokenLim: newRateLimiter(time.Minute, 20, 10000), passwordLim: newRateLimiter(time.Minute, 10, 10000)}
 	s.cluster = clusterapi.New(st.DB)
 	s.clusterTransport = clusterapi.NewTransport(st.DB, s.cluster, nil)
-	s.propagation = &coreprop.Manager{Adapter: productprop.New(st), Store: productprop.NewStateStore(st)}
+	propagationAdapter := productprop.New(st)
+	if cfg.Replication.Enabled {
+		propagationAdapter = productprop.NewReplicated(st)
+	}
+	s.propagation = &coreprop.Manager{Adapter: propagationAdapter, Store: productprop.NewStateStore(st)}
 	s.oidc = oidc.New(st, s.auth)
 	s.notifications = notifications.New(st)
 	// Local country database: load any already-installed copy (no network); when

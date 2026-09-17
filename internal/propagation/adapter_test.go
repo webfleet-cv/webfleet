@@ -111,3 +111,32 @@ func TestPropagationBlocksMonitorWithMissingSite(t *testing.T) {
 		t.Fatalf("expected missing-dependency site:7 issue, got %#v", preview.Issues)
 	}
 }
+
+func TestReplicatedPropagationRejectsFleetTopologyWrites(t *testing.T) {
+	ctx := context.Background()
+	src := openPropagationStore(t)
+	dst := openPropagationStore(t)
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	if _, err := src.DB.Exec(`INSERT INTO sites(id,organization_id,name,primary_url,enabled,created_at,updated_at) VALUES(7,1,'New Site','https://new.example',1,?,?)`, now, now); err != nil {
+		t.Fatal(err)
+	}
+
+	env, err := New(src).Export(ctx, []string{"request-definition"}, core.Actor{Kind: "user", ID: "1", Permission: "sites.update"}, "members")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(env) != 1 || env[0].Kind != "request-definition" {
+		t.Fatalf("expected one request-definition, got %#v", env)
+	}
+
+	if _, err = NewReplicated(dst).Apply(ctx, env[0]); err == nil {
+		t.Fatal("replicated propagation must reject direct fleet-topology materialization")
+	}
+	var sites int
+	if err = dst.DB.QueryRow(`SELECT COUNT(*) FROM sites`).Scan(&sites); err != nil {
+		t.Fatal(err)
+	}
+	if sites != 0 {
+		t.Fatalf("rejected propagation mutated replicated fleet topology: sites=%d", sites)
+	}
+}
