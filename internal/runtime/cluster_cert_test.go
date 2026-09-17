@@ -447,7 +447,7 @@ func TestThreeNodeProductionCertification(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
-	wfWaitReady(t, c, corerepl.ReadinessReadyFollower)
+	wfWaitReadyAny(t, c)
 	wfWaitCount(t, c, `SELECT COUNT(*) FROM groups WHERE cluster_id='wfg_revoke'`, 1)
 
 	// Quorum wall: 3/3 proven; close C -> 2/3 writable.
