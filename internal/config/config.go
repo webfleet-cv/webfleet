@@ -25,6 +25,18 @@ type Config struct {
 	AnalyticsServerSide bool
 	GeoIPURL            string
 	GeoIPAutoUpdate     bool
+	Replication         ReplicationConfig
+}
+
+type ReplicationConfig struct {
+	Enabled           bool
+	NodeID            string
+	Listen            string
+	Bootstrap         bool
+	TLSCert           string
+	TLSKey            string
+	TLSCA             string
+	InsecurePlaintext bool
 }
 
 func Load() (Config, error) {
@@ -87,6 +99,20 @@ func Load() (Config, error) {
 		// DB-IP Lite country dataset (CC BY 4.0, no registration required).
 		c.GeoIPURL = "https://download.db-ip.com/free/dbip-country-lite.csv.gz"
 	}
+	if v := os.Getenv("WEBFLEET_REPLICATION_ENABLED"); v == "1" || strings.EqualFold(v, "true") {
+		c.Replication.Enabled = true
+	}
+	c.Replication.NodeID = os.Getenv("WEBFLEET_REPLICATION_NODE_ID")
+	c.Replication.Listen = os.Getenv("WEBFLEET_REPLICATION_LISTEN")
+	if v := os.Getenv("WEBFLEET_REPLICATION_BOOTSTRAP"); v == "1" || strings.EqualFold(v, "true") {
+		c.Replication.Bootstrap = true
+	}
+	c.Replication.TLSCert = os.Getenv("WEBFLEET_REPLICATION_TLS_CERT")
+	c.Replication.TLSKey = os.Getenv("WEBFLEET_REPLICATION_TLS_KEY")
+	c.Replication.TLSCA = os.Getenv("WEBFLEET_REPLICATION_TLS_CA")
+	if v := os.Getenv("WEBFLEET_REPLICATION_INSECURE_PLAINTEXT"); v == "1" || strings.EqualFold(v, "true") {
+		c.Replication.InsecurePlaintext = true
+	}
 	if v := os.Getenv("WEBFLEET_GEOIP_AUTO_UPDATE"); v == "0" || strings.EqualFold(v, "false") {
 		c.GeoIPAutoUpdate = false
 	} else {
@@ -99,6 +125,17 @@ func Load() (Config, error) {
 	if c.DatabaseURL == "" {
 		if choice, e := LoadDatabaseChoice(c.DataDir); e == nil && choice.Provider == "postgres" {
 			c.DatabaseURL = choice.URL
+		}
+	}
+	if c.Replication.Enabled {
+		if c.DatabaseURL != "" {
+			return c, fmt.Errorf("Webfleet clustering currently requires SQLite")
+		}
+		if strings.TrimSpace(c.Replication.Listen) == "" {
+			return c, fmt.Errorf("WEBFLEET_REPLICATION_LISTEN is required when replication is enabled")
+		}
+		if !c.Replication.InsecurePlaintext && (c.Replication.TLSCert == "" || c.Replication.TLSKey == "" || c.Replication.TLSCA == "") {
+			return c, fmt.Errorf("replication TLS cert, key and CA are required")
 		}
 	}
 	return c, nil

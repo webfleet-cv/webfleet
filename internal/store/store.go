@@ -220,6 +220,12 @@ var migrations = []migration{
 		`ALTER TABLE users ADD COLUMN username TEXT`,
 		`UPDATE users SET username = CASE WHEN instr(email,'@')>0 THEN substr(email,1,instr(email,'@')-1) ELSE email END WHERE username IS NULL OR trim(username)=''`,
 	}},
+	{40, "replicated fleet configuration identities", []string{
+		`ALTER TABLE groups ADD COLUMN cluster_id TEXT`,
+		`ALTER TABLE sites ADD COLUMN cluster_id TEXT`,
+		`CREATE UNIQUE INDEX groups_cluster_id_idx ON groups(cluster_id) WHERE cluster_id IS NOT NULL`,
+		`CREATE UNIQUE INDEX sites_cluster_id_idx ON sites(cluster_id) WHERE cluster_id IS NOT NULL`,
+	}},
 }
 
 func Open(dataDir string) (*Store, error) {

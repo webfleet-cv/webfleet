@@ -20,7 +20,7 @@ import (
 
 const ProtocolVersion = core.ProtocolVersion
 
-var DefaultCapabilities = []string{"cluster.health", "cluster.webfleet.summary", "cluster.webfleet.compare", "cluster.propagation"}
+var DefaultCapabilities = []string{"cluster.health", "cluster.webfleet.summary", "cluster.webfleet.compare", "cluster.propagation", "replication"}
 
 type Service struct {
 	db  *database.DB
