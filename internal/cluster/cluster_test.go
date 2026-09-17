@@ -509,3 +509,28 @@ func TestRotationBoundaryPendingExpiryProvesRecovery(t *testing.T) {
 		t.Fatalf("pair did not recover after re-rotation: %v", err)
 	}
 }
+
+func TestEligibleVoterPreventsUnpairedAndInactiveAdmission(t *testing.T) {
+	_, a := openTest(t)
+	ctx := context.Background()
+	bi, _ := a.UpdateIdentity(ctx, "b", "https://b.example", "test")
+	_, token, err := a.Invite(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Pair(ctx, token, bi); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.EligibleVoter(ctx, bi.NodeID); err != nil {
+		t.Fatalf("active paired peer should be eligible: %v", err)
+	}
+	if err := a.EligibleVoter(ctx, "unknown-node"); err == nil {
+		t.Fatal("unpaired node must be rejected before AddVoter")
+	}
+	if err := a.Revoke(ctx, bi.NodeID); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.EligibleVoter(ctx, bi.NodeID); err == nil {
+		t.Fatal("revoked peer must be rejected before AddVoter")
+	}
+}

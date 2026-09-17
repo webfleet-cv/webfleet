@@ -236,6 +236,34 @@ func (s *Service) SetEnabled(ctx context.Context, id string, enabled bool) error
 	}
 	return nil
 }
+
+// EligibleVoter reports whether the target Gantry member may be admitted to Raft
+// voter membership as an active, paired, replication-capable, protocol- and
+// capability-compatible peer. This is the operator preflight that prevents the
+// unpaired-voter availability foot-gun (an unknown voter being committed into the
+// Raft configuration and then failing the Core capability gate, which would make
+// the cluster read-only).
+func (s *Service) EligibleVoter(ctx context.Context, nodeID string) error {
+	var state, caps string
+	var protocol int
+	e := s.db.QueryRowContext(ctx, `SELECT state,capabilities_json,protocol_version FROM cluster_members WHERE node_id=?`, nodeID).Scan(&state, &caps, &protocol)
+	if errors.Is(e, sql.ErrNoRows) {
+		return fmt.Errorf("member %q is not paired; pair/authenticate the node before joining it as a voter", nodeID)
+	}
+	if e != nil {
+		return e
+	}
+	if state != core.MemberActive {
+		return fmt.Errorf("member %q is not active (state=%s); enable/repair the peer before joining it", nodeID, state)
+	}
+	var advertised []string
+	_ = json.Unmarshal([]byte(caps), &advertised)
+	if e := core.Compatible(ProtocolVersion, protocol, DefaultCapabilities, advertised, ""); e != nil {
+		return fmt.Errorf("member %q is not a compatible replication peer: %w", nodeID, e)
+	}
+	return nil
+}
+
 func (s *Service) Revoke(ctx context.Context, id string) error {
 	r, err := s.db.ExecContext(ctx, `UPDATE cluster_members SET state=?,revoked_at=? WHERE node_id=? AND state!=?`, core.MemberRevoked, s.now().UTC().Format(time.RFC3339Nano), id, core.MemberRevoked)
 	if err != nil {

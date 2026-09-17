@@ -88,6 +88,10 @@ func (s *Server) handleReplicationJoin(w http.ResponseWriter, r *http.Request, _
 		writeError(w, 400, "node_id and address required")
 		return
 	}
+	if e := s.cluster.EligibleVoter(r.Context(), in.NodeID); e != nil {
+		writeError(w, 409, e.Error())
+		return
+	}
 	if e := s.replicationNode.AddVoter(raft.ServerID(in.NodeID), raft.ServerAddress(in.Address)); e != nil {
 		writeError(w, 409, e.Error())
 		return
