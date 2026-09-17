@@ -21,7 +21,7 @@ type Store struct {
 	path string
 }
 
-const schemaVersion = 39
+const schemaVersion = 40
 
 type migration struct {
 	version int
