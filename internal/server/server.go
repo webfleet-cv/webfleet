@@ -16,6 +16,7 @@ import (
 	"time"
 
 	coreprop "github.com/gantry-tools/gantry-core/propagation"
+	"github.com/gantry-tools/gantry-core/replication"
 	"github.com/webfleet-cv/webfleet/internal/analytics"
 	"github.com/webfleet-cv/webfleet/internal/apitokens"
 	"github.com/webfleet-cv/webfleet/internal/audit"
@@ -36,6 +37,7 @@ import (
 	"github.com/webfleet-cv/webfleet/internal/performance"
 	productprop "github.com/webfleet-cv/webfleet/internal/propagation"
 	"github.com/webfleet-cv/webfleet/internal/rbac"
+	"github.com/webfleet-cv/webfleet/internal/replicated"
 	"github.com/webfleet-cv/webfleet/internal/requestmeta"
 	"github.com/webfleet-cv/webfleet/internal/sites"
 	"github.com/webfleet-cv/webfleet/internal/store"
@@ -123,6 +125,9 @@ var apiRouteDefs = []routeDef{
 	{"PUT", "/api/cluster/v1/propagation/profiles/{id}", "membership.update", true, func(s *Server) handler { return s.handlePropagationProfilePut }, nil},
 	{"DELETE", "/api/cluster/v1/propagation/profiles/{id}", "membership.update", true, func(s *Server) handler { return s.handlePropagationProfileDelete }, nil},
 	{"POST", "/api/cluster/v1/propagation/profiles/run-due", "membership.update", true, func(s *Server) handler { return s.handlePropagationRunDue }, nil},
+	{"GET", "/api/cluster/v1/replication/status", "membership.update", false, func(s *Server) handler { return s.handleReplicationStatus }, nil},
+	{"POST", "/api/cluster/v1/replication/join", "membership.update", true, func(s *Server) handler { return s.handleReplicationJoin }, nil},
+	{"POST", "/api/cluster/v1/replication/snapshot", "membership.update", true, func(s *Server) handler { return s.handleReplicationSnapshot }, nil},
 	{"POST", "/api/me/password", "session", true, func(s *Server) handler { return s.handleChangePassword }, nil},
 	{"POST", "/api/tokens", "tokens.manage", true, func(s *Server) handler { return s.handleCreateToken }, nil},
 	{"DELETE", "/api/tokens/{id}", "tokens.manage", true, func(s *Server) handler { return s.handleRevokeToken }, nil},
@@ -202,6 +207,9 @@ type Server struct {
 	cluster           *clusterapi.Service
 	clusterTransport  *clusterapi.Transport
 	propagation       *coreprop.Manager
+	replication       *replicated.Controller
+	replicationNode   *replication.Node
+	replicationFSM    *replicated.FSM
 	geo               *geo.Manager
 	log               *slog.Logger
 	http              *http.Server
@@ -303,6 +311,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/cluster/v1/rpc/propagation/preview", s.handlePropagationRPCPreview)
 	s.mux.HandleFunc("POST /api/cluster/v1/rpc/propagation/apply", s.handlePropagationRPCApply)
 	s.mux.HandleFunc("POST /api/cluster/v1/rpc/rotate-inbound", s.handleClusterRPCRotateInbound)
+	s.mux.HandleFunc("POST /api/cluster/v1/replication/propose", s.handleReplicationPropose)
 	for _, def := range apiRouteDefs {
 		pattern := def.method + " " + def.path
 		h := def.build(s)
@@ -1341,6 +1350,26 @@ func (s *Server) handleCreateGroup(w http.ResponseWriter, r *http.Request, p pri
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if s.replication != nil {
+		name := strings.TrimSpace(in.Name)
+		if name == "" || len(name) > 80 {
+			writeError(w, 400, "group name must be 1..80 characters")
+			return
+		}
+		cid := clusterObjectID("wfg_")
+		now := store.Now()
+		if _, err := s.replication.Propose(replicationRequestContext(r), replicated.KindGroupPut, cid, replicated.GroupPayload{ClusterID: cid, OrgID: p.OrgID, Name: name, CreatedAt: now}); err != nil {
+			writeError(w, replicationHTTPStatus(err), err.Error())
+			return
+		}
+		g, err := s.sites.GroupByClusterID(p.OrgID, cid)
+		if err != nil {
+			writeError(w, 503, err.Error())
+			return
+		}
+		writeJSON(w, 201, g)
+		return
+	}
 	g, err := s.sites.CreateGroup(p.OrgID, in.Name)
 	if err != nil {
 		writeError(w, 400, err.Error())
@@ -1373,6 +1402,37 @@ func (s *Server) handleCreateSite(w http.ResponseWriter, r *http.Request, p prin
 		GroupID    int64  `json:"group_id"`
 	}
 	if !decodeJSON(w, r, &in) {
+		return
+	}
+	if s.replication != nil {
+		name := strings.TrimSpace(in.Name)
+		if name == "" || len(name) > 120 {
+			writeError(w, 400, "site name must be 1..120 characters")
+			return
+		}
+		u, err := sites.CanonicalURL(in.PrimaryURL)
+		if err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+		gcid, err := s.sites.ClusterIDForGroup(p.OrgID, in.GroupID)
+		if err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+		cid := clusterObjectID("wfs_")
+		now := store.Now()
+		payload := replicated.SitePayload{ClusterID: cid, OrgID: p.OrgID, Name: name, PrimaryURL: u, GroupClusterID: gcid, Enabled: true, CreatedAt: now, UpdatedAt: now}
+		if _, err = s.replication.Propose(replicationRequestContext(r), replicated.KindSitePut, cid, payload); err != nil {
+			writeError(w, replicationHTTPStatus(err), err.Error())
+			return
+		}
+		site, err := s.sites.GetByClusterID(p.OrgID, cid)
+		if err != nil {
+			writeError(w, 503, err.Error())
+			return
+		}
+		writeJSON(w, 201, site)
 		return
 	}
 	site, err := s.sites.Create(p.OrgID, in.Name, in.PrimaryURL, in.GroupID)
@@ -1419,6 +1479,19 @@ func (s *Server) handleSiteTagsUpdate(w http.ResponseWriter, r *http.Request, p 
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if s.replication != nil {
+		cid, e := s.sites.ClusterIDForSite(p.OrgID, id)
+		if e != nil {
+			writeError(w, 400, e.Error())
+			return
+		}
+		if _, e = s.replication.Propose(replicationRequestContext(r), replicated.KindTagsSet, cid, replicated.TagsPayload{SiteClusterID: cid, Tags: in.Tags}); e != nil {
+			writeError(w, replicationHTTPStatus(e), e.Error())
+			return
+		}
+		writeJSON(w, 200, map[string]any{"ok": true})
+		return
+	}
 	if e := s.sites.SetTags(p.OrgID, id, in.Tags); e != nil {
 		writeError(w, 400, e.Error())
 		return
@@ -1453,6 +1526,45 @@ func (s *Server) handleUpdateSite(w http.ResponseWriter, r *http.Request, p prin
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if s.replication != nil {
+		oldSite, err := s.sites.GetForOrg(p.OrgID, id)
+		if err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+		cid, err := s.sites.ClusterIDForSite(p.OrgID, id)
+		if err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+		gcid, err := s.sites.ClusterIDForGroup(p.OrgID, in.GroupID)
+		if err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+		name := strings.TrimSpace(in.Name)
+		if name == "" || len(name) > 120 {
+			writeError(w, 400, "site name must be 1..120 characters")
+			return
+		}
+		u, err := sites.CanonicalURL(in.PrimaryURL)
+		if err != nil {
+			writeError(w, 400, err.Error())
+			return
+		}
+		payload := replicated.SitePayload{ClusterID: cid, OrgID: p.OrgID, Name: name, PrimaryURL: u, GroupClusterID: gcid, Enabled: in.Enabled, Archived: oldSite.Archived, CreatedAt: oldSite.CreatedAt, UpdatedAt: store.Now()}
+		if _, err = s.replication.Propose(replicationRequestContext(r), replicated.KindSitePut, cid, payload); err != nil {
+			writeError(w, replicationHTTPStatus(err), err.Error())
+			return
+		}
+		site, err := s.sites.GetByClusterID(p.OrgID, cid)
+		if err != nil {
+			writeError(w, 503, err.Error())
+			return
+		}
+		writeJSON(w, 200, site)
+		return
+	}
 	site, err := s.sites.Update(p.OrgID, id, in.Name, in.PrimaryURL, in.GroupID, in.Enabled)
 	if err != nil {
 		writeError(w, 400, err.Error())
@@ -1474,6 +1586,19 @@ func (s *Server) handleArchiveSite(w http.ResponseWriter, r *http.Request, p pri
 	if !decodeJSON(w, r, &in) {
 		return
 	}
+	if s.replication != nil {
+		cid, e := s.sites.ClusterIDForSite(p.OrgID, id)
+		if e != nil {
+			writeError(w, 400, e.Error())
+			return
+		}
+		if _, e = s.replication.Propose(replicationRequestContext(r), replicated.KindSiteArchive, cid, replicated.SitePayload{ClusterID: cid, Archived: in.Archived, UpdatedAt: store.Now()}); e != nil {
+			writeError(w, replicationHTTPStatus(e), e.Error())
+			return
+		}
+		writeJSON(w, 200, map[string]any{"ok": true})
+		return
+	}
 	if err := s.sites.Archive(p.OrgID, id, in.Archived); err != nil {
 		writeError(w, 400, err.Error())
 		return
@@ -1486,6 +1611,28 @@ func (s *Server) handleDeleteSite(w http.ResponseWriter, r *http.Request, p prin
 		return
 	}
 	if _, ok = s.site(w, p, id); !ok {
+		return
+	}
+	if s.replication != nil {
+		site, e := s.sites.GetForOrg(p.OrgID, id)
+		if e != nil {
+			writeError(w, 400, e.Error())
+			return
+		}
+		if !site.Archived {
+			writeError(w, 400, "archive site before deleting it")
+			return
+		}
+		cid, e := s.sites.ClusterIDForSite(p.OrgID, id)
+		if e != nil {
+			writeError(w, 400, e.Error())
+			return
+		}
+		if _, e = s.replication.Propose(replicationRequestContext(r), replicated.KindSiteDelete, cid, map[string]bool{"delete": true}); e != nil {
+			writeError(w, replicationHTTPStatus(e), e.Error())
+			return
+		}
+		writeJSON(w, 200, map[string]any{"ok": true})
 		return
 	}
 	if err := s.sites.Delete(p.OrgID, id); err != nil {

@@ -307,3 +307,36 @@ func (s *Service) ListByTag(orgID int64, q string, groupID int64, tag string, pa
 	}
 	return out, nil
 }
+
+// ClusterIDForSite returns the stable consensus identity for a clustered site.
+func (s *Service) ClusterIDForSite(orgID, id int64) (string, error) {
+	r, e := sqlite.Query(s.store.DB, `SELECT cluster_id FROM sites WHERE id=? AND organization_id=?`, id, orgID)
+	if e != nil || len(r) == 0 || r[0]["cluster_id"].Null {
+		return "", errors.New("site is not cluster-managed")
+	}
+	return r[0]["cluster_id"].Text, nil
+}
+func (s *Service) ClusterIDForGroup(orgID, id int64) (string, error) {
+	if id == 0 {
+		return "", nil
+	}
+	r, e := sqlite.Query(s.store.DB, `SELECT cluster_id FROM groups WHERE id=? AND organization_id=?`, id, orgID)
+	if e != nil || len(r) == 0 || r[0]["cluster_id"].Null {
+		return "", errors.New("group is not cluster-managed")
+	}
+	return r[0]["cluster_id"].Text, nil
+}
+func (s *Service) GetByClusterID(orgID int64, cid string) (Site, error) {
+	r, e := sqlite.Query(s.store.DB, `SELECT id FROM sites WHERE cluster_id=? AND organization_id=?`, cid, orgID)
+	if e != nil || len(r) == 0 {
+		return Site{}, errors.New("site not found")
+	}
+	return s.GetForOrg(orgID, r[0]["id"].Int64)
+}
+func (s *Service) GroupByClusterID(orgID int64, cid string) (Group, error) {
+	r, e := sqlite.Query(s.store.DB, `SELECT id,name FROM groups WHERE cluster_id=? AND organization_id=?`, cid, orgID)
+	if e != nil || len(r) == 0 {
+		return Group{}, errors.New("group not found")
+	}
+	return Group{ID: r[0]["id"].Int64, Name: r[0]["name"].Text}, nil
+}
