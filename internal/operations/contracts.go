@@ -118,6 +118,10 @@ var specs = []spec{
 	{"webfleet.service.api.cluster.v1.rpc.propagation.preview", "POST", "/api/cluster/v1/rpc/propagation/preview", "", "", "", "internal/server/propagation.go", operation.Read, operation.Service, nil, operation.ServiceProtocol, false, nil},
 	{"webfleet.service.api.cluster.v1.rpc.propagation.apply", "POST", "/api/cluster/v1/rpc/propagation/apply", "", "", "", "internal/server/propagation.go", operation.Mutation, operation.Service, nil, operation.ServiceProtocol, false, nil},
 	{"webfleet.service.api.cluster.v1.rpc.rotate-inbound", "POST", "/api/cluster/v1/rpc/rotate-inbound", "", "", "", "internal/server/cluster.go", operation.Mutation, operation.Service, nil, operation.ServiceProtocol, false, nil},
+	{"webfleet.service.api.cluster.v1.replication.propose", "POST", "/api/cluster/v1/replication/propose", "", "", "", "internal/server/replication.go", operation.Mutation, operation.Service, nil, operation.ServiceProtocol, false, nil},
+	{"webfleet.cluster.replication.status.get", "GET", "/api/cluster/v1/replication/status", "cluster-replication", "status", "membership.update", "internal/server/replication.go", operation.Read, operation.Capability, nil, operation.Automatable, true, nil},
+	{"webfleet.cluster.replication.join.create", "POST", "/api/cluster/v1/replication/join", "cluster-replication", "join", "membership.update", "internal/server/replication.go", operation.Mutation, operation.Capability, nil, operation.Automatable, true, nil},
+	{"webfleet.cluster.replication.snapshot.create", "POST", "/api/cluster/v1/replication/snapshot", "cluster-replication", "snapshot", "membership.update", "internal/server/replication.go", operation.Mutation, operation.Capability, nil, operation.Automatable, true, nil},
 }
 
 var Contracts = buildContracts()

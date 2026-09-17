@@ -399,6 +399,50 @@
       ]
     },
     {
+      "operation": "webfleet.cluster.replication.join.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/cluster/v1/replication/join",
+      "cli": "cluster-replication join",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.cluster.replication.join.create.request.v1",
+      "output_schema": "webfleet.cluster.replication.join.create.response.v1",
+      "tests": [
+        "internal/server/replication.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.replication.snapshot.create",
+      "website": true,
+      "method": "POST",
+      "route": "/api/cluster/v1/replication/snapshot",
+      "cli": "cluster-replication snapshot",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "input_schema": "webfleet.cluster.replication.snapshot.create.request.v1",
+      "output_schema": "webfleet.cluster.replication.snapshot.create.response.v1",
+      "tests": [
+        "internal/server/replication.go"
+      ]
+    },
+    {
+      "operation": "webfleet.cluster.replication.status.get",
+      "website": true,
+      "method": "GET",
+      "route": "/api/cluster/v1/replication/status",
+      "cli": "cluster-replication status",
+      "cli_observed": true,
+      "boundary": "capability",
+      "permission": "membership.update",
+      "output_schema": "webfleet.cluster.replication.status.get.response.v1",
+      "tests": [
+        "internal/server/replication.go"
+      ]
+    },
+    {
       "operation": "webfleet.cluster.status.get",
       "website": true,
       "method": "GET",
@@ -784,6 +828,19 @@
       "output_schema": "webfleet.service.api.cluster.v1.join.post.response.v1",
       "tests": [
         "internal/cluster/cluster_test.go"
+      ]
+    },
+    {
+      "operation": "webfleet.service.api.cluster.v1.replication.propose",
+      "website": false,
+      "method": "POST",
+      "route": "/api/cluster/v1/replication/propose",
+      "cli_observed": false,
+      "boundary": "service",
+      "input_schema": "webfleet.service.api.cluster.v1.replication.propose.request.v1",
+      "output_schema": "webfleet.service.api.cluster.v1.replication.propose.response.v1",
+      "tests": [
+        "internal/server/replication.go"
       ]
     },
     {

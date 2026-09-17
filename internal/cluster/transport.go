@@ -74,6 +74,11 @@ func (t *Transport) Authenticate(r *http.Request, capability string) ([]byte, st
 	_, _ = t.db.ExecContext(r.Context(), `UPDATE cluster_members SET last_seen_at=? WHERE node_id=?`, t.now().UTC().Format(time.RFC3339Nano), env.NodeID)
 	return body, env.RequestID, nil
 }
+func (t *Transport) SetHTTPClient(c *http.Client) {
+	if c != nil {
+		t.client = c
+	}
+}
 func (t *Transport) Do(ctx context.Context, nodeID, method, path, capability string, body []byte) (*http.Response, error) {
 	var endpoint, secret, previous, state string
 	var protocol int

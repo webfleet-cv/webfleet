@@ -173,7 +173,19 @@ func (f *FSM) materialize(tx *sql.Tx, op replication.Operation) error {
 		if e != nil && !errors.Is(e, sql.ErrNoRows) {
 			return e
 		}
-		_, e = tx.Exec(`INSERT INTO groups(organization_id,name,created_at,cluster_id) VALUES(?,?,?,?) ON CONFLICT(cluster_id) DO UPDATE SET name=excluded.name`, p.OrgID, p.Name, p.CreatedAt, p.ClusterID)
+		// Deterministic upsert keyed on the stable cluster identity. The unique
+		// index on cluster_id is partial (WHERE cluster_id IS NOT NULL), so
+		// ON CONFLICT(cluster_id) is not a valid conflict target.
+		var id int64
+		e = tx.QueryRow(`SELECT id FROM groups WHERE cluster_id=?`, p.ClusterID).Scan(&id)
+		if errors.Is(e, sql.ErrNoRows) {
+			_, e = tx.Exec(`INSERT INTO groups(organization_id,name,created_at,cluster_id) VALUES(?,?,?,?)`, p.OrgID, p.Name, p.CreatedAt, p.ClusterID)
+			return e
+		}
+		if e != nil {
+			return e
+		}
+		_, e = tx.Exec(`UPDATE groups SET organization_id=?,name=? WHERE cluster_id=?`, p.OrgID, p.Name, p.ClusterID)
 		return e
 	case KindSitePut:
 		var p SitePayload

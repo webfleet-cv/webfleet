@@ -1,931 +1,958 @@
 {
-  "schemaVersion": 1,
-  "checkpoint": "CP30-campaign1",
-  "description": "Authoritative route/permission inventory for the Web Fleet HTTP API. This document is enforced by the route-inventory contract test (internal/server/route_inventory_test.go), which derives minRole from the rbac role/action matrix and verifies every registered route. A route with action null is unauthenticated. 'session' means any authenticated organization member. Policy decision (CP30 Campaign 1 closure): operators may archive sites (reversible, site.archive) but may not permanently delete them (site.delete is admin/owner only); the sole owner-only action, organization.delete, is deliberately not exposed over HTTP.",
-  "actions": [
-    "organization.read",
-    "organization.update",
-    "organization.delete",
-    "membership.update",
-    "tokens.manage",
-    "webhooks.read",
-    "webhooks.manage",
-    "maintenance.read",
-    "maintenance.manage",
-    "fleet.read",
-    "site.read",
-    "site.create",
-    "site.update",
-    "site.archive",
-    "site.delete",
-    "monitor.read",
-    "monitor.run",
-    "monitor.update",
-    "audit.read",
-    "audit.run",
-    "audit.configure",
-    "crawl.read",
-    "crawl.run",
-    "tls.read",
-    "tls.run",
-    "dns.read",
-    "dns.run",
-    "analytics.read",
-    "analytics.manage",
-    "incidents.read",
-    "incidents.acknowledge",
-    "deployments.read",
-    "deployments.record",
-    "session",
-    "launcher.configure.all"
-  ],
-  "routes": [
-    {
-      "method": "GET",
-      "path": "/api/launcher/instances",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": ""
-    },
-    {
-      "method": "PUT",
-      "path": "/api/launcher/config",
-      "action": "launcher.configure.all",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/identity",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/members",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/invitations",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/joins",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/joins/{id}/{action}",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/outbound",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/outbound",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/outbound/{id}/collect",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/members/{id}/{action}",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/status",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/audit",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/compare",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/propagation/kinds",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/propagation/export",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/propagation/preview",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/propagation/apply",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/propagation/propagate",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/propagation/history",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "GET",
-      "path": "/api/cluster/v1/propagation/profiles",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/cluster/v1/propagation/profiles/{id}",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/cluster/v1/propagation/profiles/{id}",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/cluster/v1/propagation/profiles/run-due",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/healthz",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "GET",
-      "path": "/wf.js",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "POST",
-      "path": "/api/analytics/event",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "GET",
-      "path": "/api/setup/status",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "GET",
-      "path": "/api/setup/database",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "POST",
-      "path": "/api/setup/database",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "POST",
-      "path": "/api/setup",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "POST",
-      "path": "/api/login",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "GET",
-      "path": "/api/oidc/login",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "GET",
-      "path": "/api/oidc/callback",
-      "action": null,
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": null
-    },
-    {
-      "method": "GET",
-      "path": "/api/oidc/config",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/oidc/config",
-      "action": "organization.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/logout",
-      "action": "session",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "GET",
-      "path": "/api/session",
-      "action": "session",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/me/password",
-      "action": "session",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/tokens",
-      "action": "tokens.manage",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/tokens/{id}",
-      "action": "tokens.manage",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/notifications/webhooks",
-      "action": "webhooks.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/notifications/webhooks",
-      "action": "webhooks.manage",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/notifications/deliveries",
-      "action": "webhooks.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "GET",
-      "path": "/api/organization/members",
-      "action": "organization.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "POST",
-      "path": "/api/organization/members",
-      "action": "membership.update",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/groups",
-      "action": "site.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/groups",
-      "action": "site.create",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites",
-      "action": "site.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites",
-      "action": "site.create",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/tags",
-      "action": "site.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "PUT",
-      "path": "/api/sites/{id}/tags",
-      "action": "site.update",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}",
-      "action": "site.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "PUT",
-      "path": "/api/sites/{id}",
-      "action": "site.update",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/archive",
-      "action": "site.archive",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "DELETE",
-      "path": "/api/sites/{id}",
-      "action": "site.delete",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "admin",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/analytics",
-      "action": "analytics.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "analytics:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/analytics",
-      "action": "analytics.manage",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/analytics/summary",
-      "action": "analytics.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "analytics:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/analytics/goals",
-      "action": "analytics.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "analytics:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/analytics/goals",
-      "action": "analytics.manage",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/maintenance",
-      "action": "maintenance.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer"
-    },
-    {
-      "method": "PUT",
-      "path": "/api/maintenance",
-      "action": "maintenance.manage",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "POST",
-      "path": "/api/maintenance/run",
-      "action": "maintenance.manage",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "admin"
-    },
-    {
-      "method": "GET",
-      "path": "/api/fleet",
-      "action": "fleet.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "fleet:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/fleet/analytics",
-      "action": "analytics.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "analytics:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/audit",
-      "action": "audit.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/audit",
-      "action": "audit.run",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "audit:run"
-      ]
-    },
-    {
-      "method": "PUT",
-      "path": "/api/sites/{id}/audit/history",
-      "action": "audit.configure",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "admin",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/audits/resolve",
-      "action": "audit.read",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "audit:run"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/audits/batch",
-      "action": "audit.run",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "operator",
-      "tokenScopes": [
-        "audit:run"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/check",
-      "action": "monitor.run",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/deployments",
-      "action": "deployments.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/deployments",
-      "action": "deployments.record",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/deployments/correlation",
-      "action": "deployments.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/checks",
-      "action": "monitor.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/performance",
-      "action": "monitor.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/incidents",
-      "action": "incidents.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/incidents/{id}/ack",
-      "action": "incidents.acknowledge",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/tls",
-      "action": "tls.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/tls/inspect",
-      "action": "tls.run",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/fleet/tls",
-      "action": "tls.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "fleet:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/dns",
-      "action": "dns.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/dns/observe",
-      "action": "dns.run",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/http-observations",
-      "action": "monitor.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/crawl",
-      "action": "crawl.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/crawl",
-      "action": "crawl.run",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/fleet/link-regressions",
-      "action": "crawl.read",
-      "csrf": false,
-      "siteScoped": false,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "fleet:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/header-expectations",
-      "action": "monitor.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "sites:read"
-      ]
-    },
-    {
-      "method": "PUT",
-      "path": "/api/sites/{id}/header-expectations",
-      "action": "monitor.update",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/analytics/pages",
-      "action": "analytics.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "analytics:read"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/sites/{id}/analytics/countries",
-      "action": "analytics.read",
-      "csrf": false,
-      "siteScoped": true,
-      "minRole": "viewer",
-      "tokenScopes": [
-        "analytics:read"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/sites/{id}/analytics/disable",
-      "action": "analytics.manage",
-      "csrf": true,
-      "siteScoped": true,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    },
-    {
-      "method": "POST",
-      "path": "/api/analytics/geo/update",
-      "action": "analytics.manage",
-      "csrf": true,
-      "siteScoped": false,
-      "minRole": "operator",
-      "tokenScopes": [
-        "sites:write"
-      ]
-    }
-  ]
+ "schemaVersion": 1,
+ "checkpoint": "CP30-campaign1",
+ "description": "Authoritative route/permission inventory for the Web Fleet HTTP API. This document is enforced by the route-inventory contract test (internal/server/route_inventory_test.go), which derives minRole from the rbac role/action matrix and verifies every registered route. A route with action null is unauthenticated. 'session' means any authenticated organization member. Policy decision (CP30 Campaign 1 closure): operators may archive sites (reversible, site.archive) but may not permanently delete them (site.delete is admin/owner only); the sole owner-only action, organization.delete, is deliberately not exposed over HTTP.",
+ "actions": [
+  "organization.read",
+  "organization.update",
+  "organization.delete",
+  "membership.update",
+  "tokens.manage",
+  "webhooks.read",
+  "webhooks.manage",
+  "maintenance.read",
+  "maintenance.manage",
+  "fleet.read",
+  "site.read",
+  "site.create",
+  "site.update",
+  "site.archive",
+  "site.delete",
+  "monitor.read",
+  "monitor.run",
+  "monitor.update",
+  "audit.read",
+  "audit.run",
+  "audit.configure",
+  "crawl.read",
+  "crawl.run",
+  "tls.read",
+  "tls.run",
+  "dns.read",
+  "dns.run",
+  "analytics.read",
+  "analytics.manage",
+  "incidents.read",
+  "incidents.acknowledge",
+  "deployments.read",
+  "deployments.record",
+  "session",
+  "launcher.configure.all"
+ ],
+ "routes": [
+  {
+   "method": "GET",
+   "path": "/api/launcher/instances",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": ""
+  },
+  {
+   "method": "PUT",
+   "path": "/api/launcher/config",
+   "action": "launcher.configure.all",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/identity",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/members",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/invitations",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/joins",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/joins/{id}/{action}",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/outbound",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/outbound",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/outbound/{id}/collect",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/members/{id}/{action}",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/status",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/audit",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/compare",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/propagation/kinds",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/propagation/export",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/propagation/preview",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/propagation/apply",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/propagation/propagate",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/propagation/history",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/propagation/profiles",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "PUT",
+   "path": "/api/cluster/v1/propagation/profiles/{id}",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/cluster/v1/propagation/profiles/{id}",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/propagation/profiles/run-due",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/healthz",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "GET",
+   "path": "/wf.js",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "POST",
+   "path": "/api/analytics/event",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "GET",
+   "path": "/api/setup/status",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "GET",
+   "path": "/api/setup/database",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "POST",
+   "path": "/api/setup/database",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "POST",
+   "path": "/api/setup",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "POST",
+   "path": "/api/login",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "GET",
+   "path": "/api/oidc/login",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "GET",
+   "path": "/api/oidc/callback",
+   "action": null,
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": null
+  },
+  {
+   "method": "GET",
+   "path": "/api/oidc/config",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "PUT",
+   "path": "/api/oidc/config",
+   "action": "organization.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/logout",
+   "action": "session",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "GET",
+   "path": "/api/session",
+   "action": "session",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/me/password",
+   "action": "session",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/tokens",
+   "action": "tokens.manage",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/tokens/{id}",
+   "action": "tokens.manage",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/notifications/webhooks",
+   "action": "webhooks.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/notifications/webhooks",
+   "action": "webhooks.manage",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/notifications/deliveries",
+   "action": "webhooks.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "GET",
+   "path": "/api/organization/members",
+   "action": "organization.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "POST",
+   "path": "/api/organization/members",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/groups",
+   "action": "site.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/groups",
+   "action": "site.create",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites",
+   "action": "site.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites",
+   "action": "site.create",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/tags",
+   "action": "site.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "PUT",
+   "path": "/api/sites/{id}/tags",
+   "action": "site.update",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}",
+   "action": "site.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "PUT",
+   "path": "/api/sites/{id}",
+   "action": "site.update",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/archive",
+   "action": "site.archive",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "DELETE",
+   "path": "/api/sites/{id}",
+   "action": "site.delete",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "admin",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/analytics",
+   "action": "analytics.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "analytics:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/analytics",
+   "action": "analytics.manage",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/analytics/summary",
+   "action": "analytics.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "analytics:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/analytics/goals",
+   "action": "analytics.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "analytics:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/analytics/goals",
+   "action": "analytics.manage",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/maintenance",
+   "action": "maintenance.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer"
+  },
+  {
+   "method": "PUT",
+   "path": "/api/maintenance",
+   "action": "maintenance.manage",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "POST",
+   "path": "/api/maintenance/run",
+   "action": "maintenance.manage",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin"
+  },
+  {
+   "method": "GET",
+   "path": "/api/fleet",
+   "action": "fleet.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "fleet:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/fleet/analytics",
+   "action": "analytics.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "analytics:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/audit",
+   "action": "audit.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/audit",
+   "action": "audit.run",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "audit:run"
+   ]
+  },
+  {
+   "method": "PUT",
+   "path": "/api/sites/{id}/audit/history",
+   "action": "audit.configure",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "admin",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/audits/resolve",
+   "action": "audit.read",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "audit:run"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/audits/batch",
+   "action": "audit.run",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "operator",
+   "tokenScopes": [
+    "audit:run"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/check",
+   "action": "monitor.run",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/deployments",
+   "action": "deployments.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/deployments",
+   "action": "deployments.record",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/deployments/correlation",
+   "action": "deployments.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/checks",
+   "action": "monitor.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/performance",
+   "action": "monitor.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/incidents",
+   "action": "incidents.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/incidents/{id}/ack",
+   "action": "incidents.acknowledge",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/tls",
+   "action": "tls.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/tls/inspect",
+   "action": "tls.run",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/fleet/tls",
+   "action": "tls.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "fleet:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/dns",
+   "action": "dns.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/dns/observe",
+   "action": "dns.run",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/http-observations",
+   "action": "monitor.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/crawl",
+   "action": "crawl.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/crawl",
+   "action": "crawl.run",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/fleet/link-regressions",
+   "action": "crawl.read",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "fleet:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/header-expectations",
+   "action": "monitor.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "sites:read"
+   ]
+  },
+  {
+   "method": "PUT",
+   "path": "/api/sites/{id}/header-expectations",
+   "action": "monitor.update",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/analytics/pages",
+   "action": "analytics.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "analytics:read"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/sites/{id}/analytics/countries",
+   "action": "analytics.read",
+   "csrf": false,
+   "siteScoped": true,
+   "minRole": "viewer",
+   "tokenScopes": [
+    "analytics:read"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/sites/{id}/analytics/disable",
+   "action": "analytics.manage",
+   "csrf": true,
+   "siteScoped": true,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "POST",
+   "path": "/api/analytics/geo/update",
+   "action": "analytics.manage",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "operator",
+   "tokenScopes": [
+    "sites:write"
+   ]
+  },
+  {
+   "method": "GET",
+   "path": "/api/cluster/v1/replication/status",
+   "action": "membership.update",
+   "csrf": false,
+   "siteScoped": false,
+   "minRole": "admin",
+   "tokenScopes": null
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/replication/join",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin",
+   "tokenScopes": null
+  },
+  {
+   "method": "POST",
+   "path": "/api/cluster/v1/replication/snapshot",
+   "action": "membership.update",
+   "csrf": true,
+   "siteScoped": false,
+   "minRole": "admin",
+   "tokenScopes": null
+  }
+ ]
 }
