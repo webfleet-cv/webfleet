@@ -286,9 +286,9 @@ func TestClaimCompletionAdvancesNextDue(t *testing.T) {
 
 func TestPostgresSQLTranslation(t *testing.T) {
 	cases := map[string]string{
-		"ALTER TABLE cluster_members ADD COLUMN pending_inbound_secret_hash BLOB":       "ALTER TABLE cluster_members ADD COLUMN pending_inbound_secret_hash BYTEA",
+		"ALTER TABLE cluster_members ADD COLUMN pending_inbound_secret_hash BLOB":                                         "ALTER TABLE cluster_members ADD COLUMN pending_inbound_secret_hash BYTEA",
 		"UPDATE users SET username = CASE WHEN instr(email,'@')>0 THEN substr(email,1,instr(email,'@')-1) ELSE email END": "UPDATE users SET username = CASE WHEN position('@' in email)>0 THEN substr(email,1,position('@' in email)-1) ELSE email END",
-		"CREATE TABLE x (id INTEGER PRIMARY KEY, data BLOB)":                            "CREATE TABLE x (id SERIAL PRIMARY KEY, data BYTEA)",
+		"CREATE TABLE x (id INTEGER PRIMARY KEY, data BLOB)":                                                              "CREATE TABLE x (id SERIAL PRIMARY KEY, data BYTEA)",
 	}
 	for in, want := range cases {
 		if got := postgresSQL(in); got != want {
