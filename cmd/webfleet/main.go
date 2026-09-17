@@ -3,16 +3,19 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
 	"github.com/gantry-tools/gantry-core/automation"
+	corerepl "github.com/gantry-tools/gantry-core/replication"
 	"github.com/webfleet-cv/webfleet/internal/config"
 	"github.com/webfleet-cv/webfleet/internal/crawler"
 	"github.com/webfleet-cv/webfleet/internal/dnsobs"
 	"github.com/webfleet-cv/webfleet/internal/monitor"
 	"github.com/webfleet-cv/webfleet/internal/notifications"
 	"github.com/webfleet-cv/webfleet/internal/operations"
+	replruntime "github.com/webfleet-cv/webfleet/internal/runtime"
 	"github.com/webfleet-cv/webfleet/internal/scheduler"
 	"github.com/webfleet-cv/webfleet/internal/server"
 	"github.com/webfleet-cv/webfleet/internal/service"
@@ -49,6 +52,9 @@ func main() {
 	}
 	if len(os.Args) >= 2 && os.Args[1] == "cluster" {
 		os.Exit(runCluster(os.Args[2:]))
+	}
+	if len(os.Args) >= 2 && os.Args[1] == "replicate" {
+		os.Exit(runReplicate(os.Args[2:]))
 	}
 	if len(os.Args) >= 2 && os.Args[1] == "reset" {
 		os.Exit(runReset(os.Args[2:]))
@@ -185,6 +191,10 @@ func main() {
 		defer nw.Stop()
 	}
 	if mode == "worker" {
+		if cfg.Replication.Enabled {
+			log.Error("replication is only supported by the integrated Webfleet server")
+			os.Exit(1)
+		}
 		log.Info("webfleet worker started")
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -193,9 +203,35 @@ func main() {
 	}
 	var srv *server.Server
 	if mode == "analytics-ingest" {
+		if cfg.Replication.Enabled {
+			log.Error("replication is only supported by the integrated Webfleet server")
+			os.Exit(1)
+		}
 		srv = server.NewAnalyticsIngest(cfg, st, log)
 	} else {
 		srv = server.New(cfg, st, log)
+	}
+	var replicatedRuntime *replruntime.Replicated
+	if cfg.Replication.Enabled {
+		if _, e := srv.ClusterService().EnsureIdentity(context.Background(), version); e != nil {
+			log.Error("cluster identity initialization failed", "error", e)
+			os.Exit(1)
+		}
+		tlsConfig, e := corerepl.LoadTLSConfig(cfg.Replication.TLSCert, cfg.Replication.TLSKey, cfg.Replication.TLSCA)
+		if e != nil && !cfg.Replication.InsecurePlaintext {
+			log.Error("replication TLS initialization failed", "error", e)
+			os.Exit(1)
+		}
+		if tlsConfig != nil && tlsConfig.RootCAs != nil {
+			srv.SetClusterHTTPClient(&http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{RootCAs: tlsConfig.RootCAs, MinVersion: tls.VersionTLS12}}})
+		}
+		replicatedRuntime, e = replruntime.NewReplication(context.Background(), replruntime.ReplicationOptions{DB: st.DB, DataDir: cfg.DataDir, NodeID: cfg.Replication.NodeID, Address: cfg.Replication.Listen, Bootstrap: cfg.Replication.Bootstrap, TLS: tlsConfig, Insecure: cfg.Replication.InsecurePlaintext, Transport: srv.ClusterTransport(), Timing: corerepl.ProductionTiming()})
+		if e != nil {
+			log.Error("replication initialization failed", "error", e)
+			os.Exit(1)
+		}
+		defer replicatedRuntime.Close()
+		srv.SetReplication(replicatedRuntime.Controller, replicatedRuntime.Node, replicatedRuntime.FSM)
 	}
 	errc := make(chan error, 1)
 	go func() {
