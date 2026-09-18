@@ -433,7 +433,7 @@ func TestRunServiceBareReinstallPreservesExplicitListener(t *testing.T) {
 	unsetListenerEnv(t)
 	path := redirectUnitPath(t)
 	// Existing explicit unit on a custom port.
-	if err := os.WriteFile(path, []byte(service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406")), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406", "")), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, code := parsedInstall(t, "install")
@@ -448,7 +448,7 @@ func TestRunServiceBareReinstallPreservesExplicitListener(t *testing.T) {
 func TestRunServiceBareReinstallPreservesBootstrapListener(t *testing.T) {
 	unsetListenerEnv(t)
 	path := redirectUnitPath(t)
-	if err := os.WriteFile(path, []byte(service.Unit("/var/lib/webfleet", "127.0.0.1:8090")), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(service.Unit("/var/lib/webfleet", "127.0.0.1:8090", "")), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, code := parsedInstall(t, "install")
@@ -475,7 +475,7 @@ func TestRunServiceBareFreshInstallIsExplicitDefault(t *testing.T) {
 func TestRunServiceExplicitOverrideChangesExistingListener(t *testing.T) {
 	unsetListenerEnv(t)
 	path := redirectUnitPath(t)
-	if err := os.WriteFile(path, []byte(service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406")), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406", "")), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	// Explicit --port must be authoritative over the existing explicit unit.
@@ -491,7 +491,7 @@ func TestRunServiceExplicitOverrideChangesExistingListener(t *testing.T) {
 func TestRunServiceExplicitOverrideChangesBootstrapListener(t *testing.T) {
 	unsetListenerEnv(t)
 	path := redirectUnitPath(t)
-	if err := os.WriteFile(path, []byte(service.Unit("/var/lib/webfleet", "127.0.0.1:8090")), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(service.Unit("/var/lib/webfleet", "127.0.0.1:8090", "")), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	got, code := parsedInstall(t, "install", "--host", "0.0.0.0", "--port", "9000")
@@ -506,7 +506,7 @@ func TestRunServiceExplicitOverrideChangesBootstrapListener(t *testing.T) {
 func TestRunServiceLegacyListenChangesExistingToBootstrap(t *testing.T) {
 	unsetListenerEnv(t)
 	path := redirectUnitPath(t)
-	if err := os.WriteFile(path, []byte(service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406")), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406", "")), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	// Explicit legacy --listen must be authoritative and switch to bootstrap.
@@ -536,7 +536,7 @@ func TestRunServiceBareReinstallMalformedUnitFailsClosed(t *testing.T) {
 func TestRunServiceBareReinstallModifiedUnitFailsClosed(t *testing.T) {
 	unsetListenerEnv(t)
 	path := redirectUnitPath(t)
-	unit := service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406")
+	unit := service.UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7406", "")
 	if err := os.WriteFile(path, []byte(strings.Replace(unit, "Restart=on-failure", "Restart=always", 1)), 0o600); err != nil {
 		t.Fatal(err)
 	}

@@ -300,6 +300,7 @@ type serviceCommand struct {
 	listen   string
 	host     string
 	port     string
+	envfile  string
 	follow   bool
 	artifact string
 	sha      string
@@ -346,11 +347,11 @@ var execServiceCommand = func(c serviceCommand) (string, error) {
 		// --host/--port form records the canonical pair in ExecStart so the
 		// runtime listener survives restart/reboot.
 		if c.listen != "" {
-			if err := service.Install(service.Executable(), c.data, c.listen); err != nil {
+			if err := service.Install(service.Executable(), c.data, c.listen, c.envfile); err != nil {
 				return "", err
 			}
 		} else {
-			if err := service.InstallExplicit(service.Executable(), c.data, c.host, c.port); err != nil {
+			if err := service.InstallExplicit(service.Executable(), c.data, c.host, c.port, c.envfile); err != nil {
 				return "", err
 			}
 		}
@@ -422,6 +423,7 @@ func parseServiceCommand(args []string) (serviceCommand, error) {
 		listen := fs.String("listen", "", "listen address (legacy; alternative to --host/--port, honors WEBFLEET_LISTEN)")
 		host := fs.String("host", "", "HTTP bind host (default 127.0.0.1; WEBFLEET_HOST overrides, CLI wins)")
 		port := fs.String("port", "", "HTTP bind port, 1-65535 (default 7336; WEBFLEET_PORT overrides, CLI wins)")
+		envFile := fs.String("env-file", "", "environment file referenced by EnvironmentFile= in the unit (e.g. WEBFLEET_REPLICATION_* settings)")
 		if err := fs.Parse(rest); err != nil {
 			return cmd, fmt.Errorf("install: %v", err)
 		}
@@ -438,6 +440,7 @@ func parseServiceCommand(args []string) (serviceCommand, error) {
 		if cmd.data == "" {
 			cmd.data = service.DefaultDataDir
 		}
+		cmd.envfile = *envFile
 		// Only install resolves and validates the listener environment
 		// (WEBFLEET_HOST/WEBFLEET_PORT/WEBFLEET_LISTEN), so malformed listener
 		// env in the invoking shell never breaks the other service verbs.

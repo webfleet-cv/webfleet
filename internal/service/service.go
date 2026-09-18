@@ -31,6 +31,12 @@ const DefaultDataDir = "/var/lib/webfleet"
 // DefaultListen is the canonical loopback listen address embedded in the unit.
 const DefaultListen = "127.0.0.1:7336"
 
+// DefaultEnvFile is the root-protected environment file the unit references via
+// EnvironmentFile= before the process drops to the service user. It can carry
+// replication/cluster configuration (for example
+// WEBFLEET_REPLICATION_INSECURE_PLAINTEXT).
+const DefaultEnvFile = "/etc/webfleet/webfleet.env"
+
 // listenMode records how a unit's recorded listener is meant to be applied.
 // Explicit units record the canonical --host/--port pair in ExecStart, so the
 // installed process genuinely binds that listener across restart/reboot.
@@ -211,6 +217,7 @@ type unitMeta struct {
 	data       string
 	listen     string
 	listenMode string
+	envfile    string
 }
 
 // readManagedUnit validates a managed unit's integrity header and parses its
@@ -244,7 +251,7 @@ func readManagedUnit(content string) (unitMeta, error) {
 	// recorded listener is only a bootstrap value, matching the legacy
 	// behaviour.
 	meta := unitMeta{listenMode: modeBootstrap}
-	dataSeen, listenSeen, modeSeen := 0, 0, 0
+	dataSeen, listenSeen, modeSeen, envfileSeen := 0, 0, 0, 0
 	for _, ln := range lines[2:] {
 		switch {
 		case strings.HasPrefix(ln, "# webfleet-data: "):
@@ -265,6 +272,12 @@ func readManagedUnit(content string) (unitMeta, error) {
 				return unitMeta{}, errMalformed
 			}
 			meta.listenMode = strings.TrimSpace(strings.TrimPrefix(ln, "# webfleet-listen-mode: "))
+		case strings.HasPrefix(ln, "# webfleet-envfile: "):
+			envfileSeen++
+			if envfileSeen > 1 {
+				return unitMeta{}, errMalformed
+			}
+			meta.envfile = strings.TrimSpace(strings.TrimPrefix(ln, "# webfleet-envfile: "))
 		}
 	}
 	if dataSeen != 1 || listenSeen != 1 || meta.data == "" || meta.listen == "" {
@@ -275,6 +288,14 @@ func readManagedUnit(content string) (unitMeta, error) {
 	}
 	for _, v := range []struct{ val, name string }{{meta.listen, "listen"}, {meta.data, "data-dir"}} {
 		if err := validateNoControl(v.val, v.name); err != nil {
+			return unitMeta{}, errMalformed
+		}
+	}
+	if meta.envfile != "" {
+		if err := validateNoControl(meta.envfile, "environment file"); err != nil {
+			return unitMeta{}, errMalformed
+		}
+		if strings.ContainsAny(meta.envfile, "%") {
 			return unitMeta{}, errMalformed
 		}
 	}
@@ -500,38 +521,40 @@ func copyFile(src, dst string, mode os.FileMode) error {
 // rate-limited instead of restarting forever. The CLI clears the accumulated
 // counter with reset-failed before its own deliberate activations, so
 // legitimate install/update/rollback restarts are never blocked.
-func unitBody(dataDir, listen string) string {
+func unitBody(dataDir, listen, envfile string) string {
 	if dataDir == "" {
 		dataDir = DefaultDataDir
 	}
 	if listen == "" {
 		listen = DefaultListen
 	}
-	return `[Unit]
-Description=Web Fleet website monitoring
-After=network-online.target
-Wants=network-online.target
-StartLimitIntervalSec=60
-StartLimitBurst=5
-
-[Service]
-Type=simple
-User=` + ServiceUser + `
-Group=` + ServiceGroup + `
-Environment=WEBFLEET_DATA_DIR=` + systemdQuote(dataDir) + `
-Environment=WEBFLEET_LISTEN=` + systemdQuote(listen) + `
-ExecStart=` + BinaryPath + `
-Restart=on-failure
-RestartSec=3
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=` + systemdQuote(dataDir) + `
-
-[Install]
-WantedBy=multi-user.target
-`
+	var b strings.Builder
+	b.WriteString("[Unit]\n")
+	b.WriteString("Description=Web Fleet website monitoring\n")
+	b.WriteString("After=network-online.target\n")
+	b.WriteString("Wants=network-online.target\n")
+	b.WriteString("StartLimitIntervalSec=60\n")
+	b.WriteString("StartLimitBurst=5\n\n")
+	b.WriteString("[Service]\n")
+	b.WriteString("Type=simple\n")
+	b.WriteString("User=" + ServiceUser + "\n")
+	b.WriteString("Group=" + ServiceGroup + "\n")
+	b.WriteString("Environment=WEBFLEET_DATA_DIR=" + systemdQuote(dataDir) + "\n")
+	b.WriteString("Environment=WEBFLEET_LISTEN=" + systemdQuote(listen) + "\n")
+	if envfile != "" {
+		b.WriteString("EnvironmentFile=" + systemdQuote(envfile) + "\n")
+	}
+	b.WriteString("ExecStart=" + BinaryPath + "\n")
+	b.WriteString("Restart=on-failure\n")
+	b.WriteString("RestartSec=3\n")
+	b.WriteString("NoNewPrivileges=true\n")
+	b.WriteString("PrivateTmp=true\n")
+	b.WriteString("ProtectSystem=strict\n")
+	b.WriteString("ProtectHome=true\n")
+	b.WriteString("ReadWritePaths=" + systemdQuote(dataDir) + "\n\n")
+	b.WriteString("[Install]\n")
+	b.WriteString("WantedBy=multi-user.target\n")
+	return b.String()
 }
 
 // unitBodyExplicit renders the systemd directives (no managed marker) for a
@@ -542,7 +565,7 @@ WantedBy=multi-user.target
 // bootstrap body, the explicit finite start-limit pair retains a crash-loop
 // boundary that the CLI's reset-failed-before-activation clears for deliberate
 // lifecycle transitions.
-func unitBodyExplicit(dataDir, host, port string) string {
+func unitBodyExplicit(dataDir, host, port, envfile string) string {
 	if dataDir == "" {
 		dataDir = DefaultDataDir
 	}
@@ -558,6 +581,9 @@ func unitBodyExplicit(dataDir, host, port string) string {
 	b.WriteString("User=" + ServiceUser + "\n")
 	b.WriteString("Group=" + ServiceGroup + "\n")
 	b.WriteString("Environment=WEBFLEET_DATA_DIR=" + systemdQuote(dataDir) + "\n")
+	if envfile != "" {
+		b.WriteString("EnvironmentFile=" + systemdQuote(envfile) + "\n")
+	}
 	b.WriteString("ExecStart=" + BinaryPath)
 	b.WriteString(" " + systemdQuote("--host") + " " + systemdQuote(strings.TrimSpace(host)))
 	b.WriteString(" " + systemdQuote("--port") + " " + systemdQuote(strings.TrimSpace(port)))
@@ -578,9 +604,12 @@ func unitBodyExplicit(dataDir, host, port string) string {
 // install: the marker, the versioned integrity header (SHA-256 of the metadata
 // + body), the recorded metadata (including the listen mode) and the systemd
 // body.
-func buildUnit(dataDir, listen string) string {
+func buildUnit(dataDir, listen, envfile string) string {
 	meta := "# webfleet-data: " + dataDir + "\n# webfleet-listen: " + listen + "\n# webfleet-listen-mode: " + modeBootstrap + "\n"
-	content := meta + unitBody(dataDir, listen)
+	if envfile != "" {
+		meta += "# webfleet-envfile: " + envfile + "\n"
+	}
+	content := meta + unitBody(dataDir, listen, envfile)
 	sum := sha256.Sum256([]byte(content))
 	header := unitMarker + "\n" + managedPrefix + "v1 sha256=" + hex.EncodeToString(sum[:]) + "\n"
 	return header + content
@@ -589,10 +618,13 @@ func buildUnit(dataDir, listen string) string {
 // buildUnitExplicit returns the full managed unit content for a new explicit
 // --host/--port install, recording the canonical joined listener and the
 // explicit listen-mode marker.
-func buildUnitExplicit(dataDir, host, port string) string {
+func buildUnitExplicit(dataDir, host, port, envfile string) string {
 	listen := net.JoinHostPort(strings.TrimSpace(host), strings.TrimSpace(port))
 	meta := "# webfleet-data: " + dataDir + "\n# webfleet-listen: " + listen + "\n# webfleet-listen-mode: " + modeExplicit + "\n"
-	content := meta + unitBodyExplicit(dataDir, host, port)
+	if envfile != "" {
+		meta += "# webfleet-envfile: " + envfile + "\n"
+	}
+	content := meta + unitBodyExplicit(dataDir, host, port, envfile)
 	sum := sha256.Sum256([]byte(content))
 	header := unitMarker + "\n" + managedPrefix + "v1 sha256=" + hex.EncodeToString(sum[:]) + "\n"
 	return header + content
@@ -600,14 +632,14 @@ func buildUnitExplicit(dataDir, host, port string) string {
 
 // Unit returns the full managed unit content for the given data dir and listen
 // address (legacy bootstrap form).
-func Unit(dataDir, listen string) string {
-	return buildUnit(dataDir, listen)
+func Unit(dataDir, listen, envfile string) string {
+	return buildUnit(dataDir, listen, envfile)
 }
 
 // UnitExplicit returns the full managed unit content for the given data dir and
 // canonical host/port pair (explicit form recording --host/--port in ExecStart).
-func UnitExplicit(dataDir, host, port string) string {
-	return buildUnitExplicit(dataDir, host, port)
+func UnitExplicit(dataDir, host, port, envfile string) string {
+	return buildUnitExplicit(dataDir, host, port, envfile)
 }
 
 // installOptions carries the values recorded in the managed unit. The legacy
@@ -620,6 +652,7 @@ type installOptions struct {
 	host       string
 	port       string
 	listenMode string
+	envfile    string
 }
 
 // listener returns the canonical listen address recorded in the unit metadata:
@@ -635,24 +668,24 @@ func (o installOptions) listener() string {
 // unit returns the full managed unit content for the install options.
 func (o installOptions) unit() string {
 	if o.listenMode == modeExplicit {
-		return buildUnitExplicit(o.dataDir, strings.TrimSpace(o.host), strings.TrimSpace(o.port))
+		return buildUnitExplicit(o.dataDir, strings.TrimSpace(o.host), strings.TrimSpace(o.port), o.envfile)
 	}
-	return buildUnit(o.dataDir, o.listener())
+	return buildUnit(o.dataDir, o.listener(), o.envfile)
 }
 
 // Install installs (or idempotently reinstalls) the webfleet systemd unit in
 // the legacy bootstrap form: the recorded listen address is set as the
 // WEBFLEET_LISTEN environment the foreground binds.
-func Install(exe, dataDir, listen string) error {
-	return install(exe, dataDir, installOptions{dataDir: dataDir, listen: listen, listenMode: modeBootstrap})
+func Install(exe, dataDir, listen, envfile string) error {
+	return install(exe, dataDir, installOptions{dataDir: dataDir, listen: listen, listenMode: modeBootstrap, envfile: envfile})
 }
 
 // InstallExplicit installs (or idempotently reinstalls) the webfleet systemd
 // unit in the explicit form: the canonical host/port pair is recorded as
 // --host/--port in ExecStart so the installed process genuinely binds that
 // listener across restart/reboot.
-func InstallExplicit(exe, dataDir, host, port string) error {
-	return install(exe, dataDir, installOptions{dataDir: dataDir, host: host, port: port, listenMode: modeExplicit})
+func InstallExplicit(exe, dataDir, host, port, envfile string) error {
+	return install(exe, dataDir, installOptions{dataDir: dataDir, host: host, port: port, listenMode: modeExplicit, envfile: envfile})
 }
 
 // install installs (or idempotently reinstalls) the webfleet systemd unit: it

@@ -147,14 +147,14 @@ func prepareUpdate(r *fakeRunner, active string, healthOK bool) {
 
 func installManagedUnit(t *testing.T) {
 	t.Helper()
-	if e := os.WriteFile(UnitPath, []byte(Unit("/var/lib/webfleet", "127.0.0.1:8090")), 0o644); e != nil {
+	if e := os.WriteFile(UnitPath, []byte(Unit("/var/lib/webfleet", "127.0.0.1:8090", "")), 0o644); e != nil {
 		t.Fatal(e)
 	}
 }
 
 func TestUnitHardeningAndManagedMarker(t *testing.T) {
 	setupService(t)
-	u := Unit("/var/lib/webfleet", "127.0.0.1:8090")
+	u := Unit("/var/lib/webfleet", "127.0.0.1:8090", "")
 	for _, x := range []string{"# Managed by webfleet. Do not edit manually.", "NoNewPrivileges=true", "ProtectSystem=strict", "ReadWritePaths=\"/var/lib/webfleet\"", "User=" + ServiceUser, "Group=" + ServiceGroup, "WantedBy=multi-user.target", "StartLimitIntervalSec=60", "StartLimitBurst=5"} {
 		if !strings.Contains(u, x) {
 			t.Fatal("missing " + x)
@@ -163,7 +163,7 @@ func TestUnitHardeningAndManagedMarker(t *testing.T) {
 	if strings.Contains(u, "StartLimitIntervalSec=0") {
 		t.Fatal("unit must retain a finite crash-loop limit, not disable it")
 	}
-	if !strings.Contains(Unit("/var/lib/web fleet", "127.0.0.1:8090"), "WEBFLEET_DATA_DIR=\"/var/lib/web fleet\"") {
+	if !strings.Contains(Unit("/var/lib/web fleet", "127.0.0.1:8090", ""), "WEBFLEET_DATA_DIR=\"/var/lib/web fleet\"") {
 		t.Fatal("data path with spaces is not quoted")
 	}
 	if e := os.WriteFile(UnitPath, []byte(u), 0o644); e != nil {
@@ -280,7 +280,7 @@ func TestInstallRequiresRootAndLinux(t *testing.T) {
 	oldRoot := isRoot
 	isRoot = func() bool { return false }
 	defer func() { isRoot = oldRoot }()
-	if e := Install("", t.TempDir(), "127.0.0.1:0"); e == nil {
+	if e := Install("", t.TempDir(), "127.0.0.1:0", ""); e == nil {
 		t.Fatal("install succeeded without root")
 	}
 }
@@ -293,7 +293,7 @@ func TestReinstallRestoresPriorStateOnFailure(t *testing.T) {
 	r.script["systemctl daemon-reload"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl start webfleet.service"] = fakeResult{}
-	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	priorUnit, _ := os.ReadFile(UnitPath)
@@ -309,7 +309,7 @@ func TestReinstallRestoresPriorStateOnFailure(t *testing.T) {
 	r.seq["systemctl disable webfleet.service"] = []fakeResult{{}, {}, {}}
 	r.script["systemctl restart webfleet.service"] = fakeResult{}
 	r.script["systemctl stop webfleet.service"] = fakeResult{}
-	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090"); e == nil {
+	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", ""); e == nil {
 		t.Fatal("failed reinstall returned nil")
 	}
 	got, _ := os.ReadFile(UnitPath)
@@ -328,7 +328,7 @@ func TestStatusReportsStates(t *testing.T) {
 	h := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
 	defer h.Close()
 	listen := strings.TrimPrefix(h.URL, "http://")
-	os.WriteFile(UnitPath, []byte(Unit("/var/lib/webfleet", listen)), 0o644)
+	os.WriteFile(UnitPath, []byte(Unit("/var/lib/webfleet", listen, "")), 0o644)
 	var buf bytes.Buffer
 	if e := Status(&buf); e != nil {
 		t.Fatal(e)
@@ -397,7 +397,7 @@ func TestQuotingSurvivesSpacesInDataPath(t *testing.T) {
 	r.script["systemctl daemon-reload"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl start webfleet.service"] = fakeResult{}
-	if e := Install(exe, data, "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, data, "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	b, _ := os.ReadFile(UnitPath)
@@ -472,7 +472,7 @@ func TestReinstallChangedBinaryRestarts(t *testing.T) {
 	r.script["systemctl disable webfleet.service"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl restart webfleet.service"] = fakeResult{}
-	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	if !contains(r.log, "systemctl restart webfleet.service") {
@@ -490,7 +490,7 @@ func TestInstallResetFailedPrecedesActivation(t *testing.T) {
 	r.script["systemctl disable webfleet.service"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl restart webfleet.service"] = fakeResult{}
-	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	if !ordered(r.log, []string{"systemctl reset-failed webfleet.service", "systemctl restart webfleet.service"}) {
@@ -513,7 +513,7 @@ func TestInstallResetFailedFailureRollsBack(t *testing.T) {
 	r.script["systemctl restart webfleet.service"] = fakeResult{}
 	// The forward activation reset fails; the rollback reset succeeds.
 	r.seq["systemctl reset-failed webfleet.service"] = []fakeResult{{out: "reset failed", code: 1}, {}}
-	if err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090"); err == nil {
+	if err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", ""); err == nil {
 		t.Fatal("install succeeded despite reset-failed failure")
 	} else if !strings.Contains(err.Error(), "reset-failed") {
 		t.Fatalf("install error must surface the reset failure: %v", err)
@@ -533,7 +533,7 @@ func TestReinstallSameBinaryIsNoOp(t *testing.T) {
 	// Byte-identical executable + identical unit + enabled + active -> no-op.
 	exe := filepath.Join(t.TempDir(), "wf2")
 	os.WriteFile(exe, mustRead(t, BinaryPath), 0o755)
-	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	for _, call := range r.log {
@@ -577,7 +577,7 @@ func TestReinstallFailureRollbackRestoresExactState(t *testing.T) {
 				r.seq["systemctl stop webfleet.service"] = []fakeResult{{out: "activation failed", code: 1}, {}, {}}
 				r.script["systemctl restart webfleet.service"] = fakeResult{}
 			}
-			if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090"); e == nil {
+			if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", ""); e == nil {
 				t.Fatal("failed reinstall returned nil")
 			}
 			// The prior unit must be restored.
@@ -1306,7 +1306,7 @@ func TestReinstallPreservesExactStateMatrix(t *testing.T) {
 			r.script["systemctl enable --runtime webfleet.service"] = fakeResult{}
 			r.script["systemctl restart webfleet.service"] = fakeResult{}
 			r.script["systemctl stop webfleet.service"] = fakeResult{}
-			if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090"); e != nil {
+			if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090", ""); e != nil {
 				t.Fatal(e)
 			}
 			for _, want := range tc.wantSteps {
@@ -1348,7 +1348,7 @@ func TestReinstallRejectsUnsupportedPriorStates(t *testing.T) {
 				}
 				exe := filepath.Join(t.TempDir(), "wf2")
 				os.WriteFile(exe, []byte("#!/bin/sh\n# new\nexit 0\n"), 0o755)
-				if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090"); e == nil {
+				if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", ""); e == nil {
 					t.Fatalf("install accepted unsupported prior state %s=%q", verb, word)
 				}
 				if got, _ := os.ReadFile(UnitPath); !bytes.Equal(got, unitBefore) {
@@ -1377,7 +1377,7 @@ func TestInstallRefusesStateQueryFailure(t *testing.T) {
 	r.script["systemctl is-enabled webfleet.service"] = fakeResult{err: fmt.Errorf("cannot reach systemd")}
 	exe := filepath.Join(t.TempDir(), "wf2")
 	os.WriteFile(exe, []byte("#!/bin/sh\n# new\nexit 0\n"), 0o755)
-	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090"); e == nil {
+	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", ""); e == nil {
 		t.Fatal("install proceeded when the prior enablement state could not be queried")
 	}
 	if got, _ := os.ReadFile(UnitPath); !bytes.Equal(got, unitBefore) {
@@ -1408,7 +1408,7 @@ func TestInstallSurfacesRollbackFailure(t *testing.T) {
 		{out: "forward enable failed", code: 1},
 		{out: "restore enable failed", code: 1},
 	}
-	err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090")
+	err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", "")
 	if err == nil {
 		t.Fatal("install with a failing forward activation returned nil")
 	}
@@ -1432,7 +1432,7 @@ func TestInstallRefusesSystemRootDataDir(t *testing.T) {
 			binBefore := mustRead(t, BinaryPath)
 			exe := filepath.Join(t.TempDir(), "wf")
 			os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-			if e := Install(exe, dir, "127.0.0.1:8090"); e == nil {
+			if e := Install(exe, dir, "127.0.0.1:8090", ""); e == nil {
 				t.Fatalf("install accepted system root data dir %q", dir)
 			}
 			if len(r.log) != 0 {
@@ -1454,7 +1454,7 @@ func TestInstallRefusesRelativeDataDir(t *testing.T) {
 	r := setupService(t)
 	exe := filepath.Join(t.TempDir(), "wf")
 	os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-	if e := Install(exe, "relative/data", "127.0.0.1:8090"); e == nil {
+	if e := Install(exe, "relative/data", "127.0.0.1:8090", ""); e == nil {
 		t.Fatal("install accepted a relative data directory")
 	}
 	if len(r.log) != 0 {
@@ -1482,7 +1482,7 @@ func TestInstallRefusesExistingForeignOwnedDir(t *testing.T) {
 	binBefore := mustRead(t, BinaryPath)
 	exe := filepath.Join(t.TempDir(), "wf")
 	os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-	if e := Install(exe, dir, "127.0.0.1:8090"); e == nil {
+	if e := Install(exe, dir, "127.0.0.1:8090", ""); e == nil {
 		t.Fatal("install adopted a foreign-owned existing directory")
 	}
 	if len(r.log) != 0 {
@@ -1513,7 +1513,7 @@ func TestInstallReusesServiceOwnedExistingDir(t *testing.T) {
 	r.script["systemctl daemon-reload"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl start webfleet.service"] = fakeResult{}
-	if e := Install(exe, dir, "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, dir, "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	b, _ := os.ReadFile(UnitPath)
@@ -1527,7 +1527,7 @@ func TestInstallReusesServiceOwnedExistingDir(t *testing.T) {
 // status.
 func TestTamperedManagedUnitRejected(t *testing.T) {
 	setupService(t)
-	u := Unit("/var/lib/webfleet", "127.0.0.1:8090")
+	u := Unit("/var/lib/webfleet", "127.0.0.1:8090", "")
 	tampered := strings.Replace(u, "127.0.0.1:8090", "127.0.0.1:9090", 1)
 	os.WriteFile(UnitPath, []byte(tampered), 0o644)
 	if e := lifecycle("start"); e == nil {
@@ -1650,7 +1650,7 @@ func TestInstallPreflightBeforeAnyMutation(t *testing.T) {
 		r := setupService(t)
 		writeForeignUnit(t)
 		c := countMutations()
-		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install proceeded with a foreign unit")
 		}
 		assertNoMutation(t, c, "foreign unit")
@@ -1658,10 +1658,10 @@ func TestInstallPreflightBeforeAnyMutation(t *testing.T) {
 	})
 	t.Run("tampered-unit", func(t *testing.T) {
 		r := setupService(t)
-		u := Unit("/var/lib/webfleet", "127.0.0.1:8090")
+		u := Unit("/var/lib/webfleet", "127.0.0.1:8090", "")
 		os.WriteFile(UnitPath, []byte(strings.Replace(u, "127.0.0.1:8090", "127.0.0.1:9090", 1)), 0o644)
 		c := countMutations()
-		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install proceeded with a tampered unit")
 		}
 		assertNoMutation(t, c, "tampered unit")
@@ -1673,7 +1673,7 @@ func TestInstallPreflightBeforeAnyMutation(t *testing.T) {
 		r.script["systemctl is-enabled webfleet.service"] = fakeResult{out: "masked", code: 1}
 		r.script["systemctl is-active webfleet.service"] = fakeResult{out: "inactive", code: 0}
 		c := countMutations()
-		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install proceeded with an unsupported enablement state")
 		}
 		assertNoMutation(t, c, "unsupported is-enabled")
@@ -1684,7 +1684,7 @@ func TestInstallPreflightBeforeAnyMutation(t *testing.T) {
 		r.script["systemctl is-enabled webfleet.service"] = fakeResult{out: "disabled", code: 0}
 		r.script["systemctl is-active webfleet.service"] = fakeResult{out: "failed", code: 3}
 		c := countMutations()
-		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install proceeded with an unsupported active state")
 		}
 		assertNoMutation(t, c, "unsupported is-active")
@@ -1694,7 +1694,7 @@ func TestInstallPreflightBeforeAnyMutation(t *testing.T) {
 		installManagedUnit(t)
 		r.script["systemctl is-enabled webfleet.service"] = fakeResult{err: fmt.Errorf("cannot reach systemd")}
 		c := countMutations()
-		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), "/srv/new-webfleet", "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install proceeded when the prior enablement state could not be queried")
 		}
 		assertNoMutation(t, c, "state-query failure")
@@ -1718,7 +1718,7 @@ func TestPrepareDataDirLeafOnlyContract(t *testing.T) {
 		r.script["systemctl daemon-reload"] = fakeResult{}
 		r.script["systemctl enable webfleet.service"] = fakeResult{}
 		r.script["systemctl start webfleet.service"] = fakeResult{}
-		if e := Install(exe, leaf, "127.0.0.1:8090"); e != nil {
+		if e := Install(exe, leaf, "127.0.0.1:8090", ""); e != nil {
 			t.Fatal(e)
 		}
 		if _, e := os.Stat(leaf); e != nil {
@@ -1736,7 +1736,7 @@ func TestPrepareDataDirLeafOnlyContract(t *testing.T) {
 		leaf := filepath.Join(root, "new-parent", "webfleet")
 		exe := filepath.Join(t.TempDir(), "wf")
 		os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-		if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install created a data leaf under a missing parent")
 		}
 		if _, e := os.Stat(filepath.Join(root, "new-parent")); !os.IsNotExist(e) {
@@ -1764,7 +1764,7 @@ func TestInstallRefusesProtectedHierarchyDescendants(t *testing.T) {
 			binBefore := mustRead(t, BinaryPath)
 			exe := filepath.Join(t.TempDir(), "wf")
 			os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-			if e := Install(exe, dir, "127.0.0.1:8090"); e == nil {
+			if e := Install(exe, dir, "127.0.0.1:8090", ""); e == nil {
 				t.Fatalf("install accepted protected hierarchy descendant %q", dir)
 			}
 			if len(r.log) != 0 {
@@ -1806,7 +1806,7 @@ func TestDataDirEstablishmentFailuresCleanUp(t *testing.T) {
 			breakIt()
 			exe := filepath.Join(t.TempDir(), "wf")
 			os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-			if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+			if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 				t.Fatal("install succeeded despite a data-leaf establishment failure")
 			}
 			if _, e := os.Stat(UnitPath); !os.IsNotExist(e) {
@@ -1842,7 +1842,7 @@ func TestDataDirEstablishmentFailuresCleanUp(t *testing.T) {
 		fchmodLeafSeam = func(int) error { return errors.New("chmod denied") }
 		exe := filepath.Join(t.TempDir(), "wf")
 		os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-		if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install succeeded despite a chmod failure")
 		} else if !strings.Contains(e.Error(), "mode 0700") {
 			t.Fatalf("chmod failure not surfaced: %v", e)
@@ -1864,7 +1864,7 @@ func TestDataDirEstablishmentFailuresCleanUp(t *testing.T) {
 		unlinkAtSeam = func(int, string) error { return errors.New("unlink denied") }
 		exe := filepath.Join(t.TempDir(), "wf")
 		os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-		if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install succeeded despite a cleanup failure")
 		} else if !strings.Contains(e.Error(), "partial leaf cleanup incomplete") {
 			t.Fatalf("cleanup failure not surfaced: %v", e)
@@ -1890,7 +1890,7 @@ func TestInstallSurfacesRollbackNeutralizationFailures(t *testing.T) {
 		r.script["systemctl restart webfleet.service"] = fakeResult{}
 		r.seq["systemctl disable webfleet.service"] = []fakeResult{{}, {}, {}}
 		r.seq["systemctl enable webfleet.service"] = []fakeResult{{out: "forward enable failed", code: 1}, {}}
-		err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090")
+		err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", "")
 		if err == nil {
 			t.Fatal("install returned nil")
 		}
@@ -1912,7 +1912,7 @@ func TestInstallSurfacesRollbackNeutralizationFailures(t *testing.T) {
 		r.script["systemctl restart webfleet.service"] = fakeResult{}
 		r.seq["systemctl disable webfleet.service"] = []fakeResult{{}, {out: "cannot disable", code: 1}, {out: "cannot disable", code: 1}}
 		r.seq["systemctl enable webfleet.service"] = []fakeResult{{out: "forward enable failed", code: 1}}
-		err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090")
+		err := Install(exe, "/var/lib/webfleet", "127.0.0.1:9090", "")
 		if err == nil {
 			t.Fatal("install returned nil")
 		}
@@ -1932,7 +1932,7 @@ func TestInstallSurfacesRollbackNeutralizationFailures(t *testing.T) {
 		r.script["systemctl start webfleet.service"] = fakeResult{out: "activation failed", code: 1}
 		r.script["systemctl stop webfleet.service"] = fakeResult{}
 		r.script["systemctl disable webfleet.service"] = fakeResult{out: "cannot disable", code: 1}
-		err := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090")
+		err := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090", "")
 		if err == nil {
 			t.Fatal("install returned nil")
 		}
@@ -1983,7 +1983,7 @@ func TestInstallRefusesExistingUnacceptableDirBeforeMutation(t *testing.T) {
 	binBefore := mustRead(t, BinaryPath)
 	exe := filepath.Join(t.TempDir(), "wf")
 	os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-	if e := Install(exe, dir, "127.0.0.1:8090"); e == nil {
+	if e := Install(exe, dir, "127.0.0.1:8090", ""); e == nil {
 		t.Fatal("install adopted a foreign-owned existing directory")
 	}
 	assertNoMutation(t, c, "existing unacceptable data dir")
@@ -2010,7 +2010,7 @@ func TestReinstallDataDirContractWithNoOp(t *testing.T) {
 		if e := os.Mkdir(dataDir, 0o700); e != nil {
 			t.Fatal(e)
 		}
-		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090")), 0o644)
+		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090", "")), 0o644)
 		setState(r, "enabled", "active")
 		serviceUID = func() (int, error) { return os.Getuid(), nil }
 		useRealDataDirSeams(t)
@@ -2018,7 +2018,7 @@ func TestReinstallDataDirContractWithNoOp(t *testing.T) {
 		c := countMutations()
 		exe := filepath.Join(t.TempDir(), "wf2")
 		os.WriteFile(exe, mustRead(t, BinaryPath), 0o755)
-		if e := Install(exe, dataDir, "127.0.0.1:8090"); e != nil {
+		if e := Install(exe, dataDir, "127.0.0.1:8090", ""); e != nil {
 			t.Fatal(e)
 		}
 		if hasMutatingSystemctl(r.log) {
@@ -2030,13 +2030,13 @@ func TestReinstallDataDirContractWithNoOp(t *testing.T) {
 		allowTempDataDirs(t)
 		r := setupService(t)
 		dataDir := filepath.Join(t.TempDir(), "webfleet")
-		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090")), 0o644)
+		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090", "")), 0o644)
 		setState(r, "enabled", "active")
 		useRealDataDirSeams(t)
 		trustParentForTest(t)
 		exe := filepath.Join(t.TempDir(), "wf2")
 		os.WriteFile(exe, mustRead(t, BinaryPath), 0o755)
-		if e := Install(exe, dataDir, "127.0.0.1:8090"); e != nil {
+		if e := Install(exe, dataDir, "127.0.0.1:8090", ""); e != nil {
 			t.Fatal(e)
 		}
 		if _, e := os.Stat(dataDir); e != nil {
@@ -2053,7 +2053,7 @@ func TestReinstallDataDirContractWithNoOp(t *testing.T) {
 		if e := os.Mkdir(dataDir, 0o700); e != nil {
 			t.Fatal(e)
 		}
-		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090")), 0o644)
+		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090", "")), 0o644)
 		setState(r, "enabled", "active")
 		testUID := os.Getuid()
 		svcUID := testUID + 1
@@ -2067,7 +2067,7 @@ func TestReinstallDataDirContractWithNoOp(t *testing.T) {
 		unitBefore, _ := os.ReadFile(UnitPath)
 		exe := filepath.Join(t.TempDir(), "wf2")
 		os.WriteFile(exe, mustRead(t, BinaryPath), 0o755)
-		if e := Install(exe, dataDir, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe, dataDir, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install accepted an unsafe existing data dir")
 		}
 		assertNoMutation(t, c, "unsafe existing data dir")
@@ -2108,7 +2108,7 @@ func TestDataDirAncestorSymlinkEscape(t *testing.T) {
 		r.script["systemctl daemon-reload"] = fakeResult{}
 		r.script["systemctl enable webfleet.service"] = fakeResult{}
 		r.script["systemctl start webfleet.service"] = fakeResult{}
-		if e := Install(exe(), leaf, "127.0.0.1:8090"); e != nil {
+		if e := Install(exe(), leaf, "127.0.0.1:8090", ""); e != nil {
 			t.Fatal(e)
 		}
 		if _, e := os.Stat(leaf); e != nil {
@@ -2125,7 +2125,7 @@ func TestDataDirAncestorSymlinkEscape(t *testing.T) {
 			t.Fatal(e)
 		}
 		leaf := filepath.Join(link, "webfleet")
-		if e := Install(exe(), leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install accepted a data leaf through a symlinked parent")
 		}
 		if _, e := os.Stat(filepath.Join(target, "webfleet")); !os.IsNotExist(e) {
@@ -2149,7 +2149,7 @@ func TestDataDirAncestorSymlinkEscape(t *testing.T) {
 			t.Fatal(e)
 		}
 		leaf := filepath.Join(link, "child", "webfleet")
-		if e := Install(exe(), leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install accepted a leaf through an intermediate symlink")
 		}
 		if _, e := os.Stat(filepath.Join(child, "webfleet")); !os.IsNotExist(e) {
@@ -2173,7 +2173,7 @@ func TestDataDirAncestorSymlinkEscape(t *testing.T) {
 			t.Fatal(e)
 		}
 		leaf := filepath.Join(link, "webfleet")
-		if e := Install(exe(), leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe(), leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install followed a symlinked ancestor into another hierarchy")
 		}
 		if _, e := os.Stat(filepath.Join(target, "webfleet")); !os.IsNotExist(e) {
@@ -2203,7 +2203,7 @@ func TestDataDirAncestorSymlinkEscape(t *testing.T) {
 		}
 		exe := filepath.Join(t.TempDir(), "wf")
 		os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-		if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install proceeded after the parent was swapped for a symlink")
 		}
 		if _, e := os.Stat(filepath.Join(substitute, "webfleet")); !os.IsNotExist(e) {
@@ -2290,7 +2290,7 @@ func TestDataDirDescriptorsClosedExactlyOnce(t *testing.T) {
 		r.script["systemctl daemon-reload"] = fakeResult{}
 		r.script["systemctl enable webfleet.service"] = fakeResult{}
 		r.script["systemctl start webfleet.service"] = fakeResult{}
-		if e := Install(exe, leaf, "127.0.0.1:8090"); e != nil {
+		if e := Install(exe, leaf, "127.0.0.1:8090", ""); e != nil {
 			t.Fatal(e)
 		}
 		tr.assert(t)
@@ -2304,13 +2304,13 @@ func TestDataDirDescriptorsClosedExactlyOnce(t *testing.T) {
 		if e := os.Mkdir(dataDir, 0o700); e != nil {
 			t.Fatal(e)
 		}
-		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090")), 0o644)
+		os.WriteFile(UnitPath, []byte(Unit(dataDir, "127.0.0.1:8090", "")), 0o644)
 		setState(r, "enabled", "active")
 		serviceUID = func() (int, error) { return os.Getuid(), nil }
 		tr := trackFds(t)
 		exe := filepath.Join(t.TempDir(), "wf2")
 		os.WriteFile(exe, mustRead(t, BinaryPath), 0o755)
-		if e := Install(exe, dataDir, "127.0.0.1:8090"); e != nil {
+		if e := Install(exe, dataDir, "127.0.0.1:8090", ""); e != nil {
 			t.Fatal(e)
 		}
 		tr.assert(t)
@@ -2328,7 +2328,7 @@ func TestDataDirDescriptorsClosedExactlyOnce(t *testing.T) {
 		tr := trackFds(t)
 		exe := filepath.Join(t.TempDir(), "wf")
 		os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-		if e := Install(exe, dataDir, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe, dataDir, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install adopted a foreign-owned leaf")
 		}
 		tr.assert(t)
@@ -2343,7 +2343,7 @@ func TestDataDirDescriptorsClosedExactlyOnce(t *testing.T) {
 		tr := trackFds(t)
 		exe := filepath.Join(t.TempDir(), "wf")
 		os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-		if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+		if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 			t.Fatal("install succeeded despite a chmod failure")
 		}
 		tr.assert(t)
@@ -2380,7 +2380,7 @@ func TestDataDirExistingLeafReplacementNotMutated(t *testing.T) {
 	r.script["systemctl daemon-reload"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl start webfleet.service"] = fakeResult{}
-	if e := Install(exe, leaf, "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, leaf, "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	// The replacement is NOT chmodded: its mode stays 0755.
@@ -2420,7 +2420,7 @@ func TestDataDirFreshLeafBindRace(t *testing.T) {
 	binBefore := mustRead(t, BinaryPath)
 	exe := filepath.Join(t.TempDir(), "wf")
 	os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-	if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+	if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 		t.Fatal("install bound a replaced fresh leaf")
 	}
 	// The replacement was never chmod'd to 0700.
@@ -2466,7 +2466,7 @@ func TestDataDirFreshRequiresTrustedParent(t *testing.T) {
 				r.script["systemctl daemon-reload"] = fakeResult{}
 				r.script["systemctl enable webfleet.service"] = fakeResult{}
 				r.script["systemctl start webfleet.service"] = fakeResult{}
-				if e := Install(exe, leaf, "127.0.0.1:8090"); e != nil {
+				if e := Install(exe, leaf, "127.0.0.1:8090", ""); e != nil {
 					t.Fatalf("trusted parent rejected: %v", e)
 				}
 				if _, e := os.Stat(leaf); e != nil {
@@ -2474,7 +2474,7 @@ func TestDataDirFreshRequiresTrustedParent(t *testing.T) {
 				}
 			} else {
 				c := countMutations()
-				if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+				if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 					t.Fatal("install created a leaf under an untrusted parent")
 				}
 				assertNoMutation(t, c, tc.name)
@@ -2520,7 +2520,7 @@ func TestDataDirParentPathnameSymlinkSwapRefused(t *testing.T) {
 	tr := trackFds(t)
 	exe := filepath.Join(t.TempDir(), "wf")
 	os.WriteFile(exe, []byte("#!/bin/sh\nexit 0\n"), 0o755)
-	if e := Install(exe, leaf, "127.0.0.1:8090"); e == nil {
+	if e := Install(exe, leaf, "127.0.0.1:8090", ""); e == nil {
 		t.Fatal("install proceeded after the parent pathname became a symlink")
 	} else if !strings.Contains(e.Error(), "parent") {
 		t.Fatalf("refusal did not identify the parent pathname: %v", e)
@@ -2546,21 +2546,21 @@ func TestDataDirParentPathnameSymlinkSwapRefused(t *testing.T) {
 // default to bootstrap.
 func oldStyleUnit(dataDir, listen string) string {
 	meta := "# webfleet-data: " + dataDir + "\n# webfleet-listen: " + listen + "\n"
-	content := meta + unitBody(dataDir, listen)
+	content := meta + unitBody(dataDir, listen, "")
 	sum := sha256.Sum256([]byte(content))
 	header := unitMarker + "\n" + managedPrefix + "v1 sha256=" + hex.EncodeToString(sum[:]) + "\n"
 	return header + content
 }
 
 func TestUnitListenModeMarkers(t *testing.T) {
-	explicit := UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7336")
+	explicit := UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7336", "")
 	if !strings.Contains(explicit, "# webfleet-listen-mode: explicit") {
 		t.Fatalf("host/port unit missing explicit mode marker:\n%s", explicit)
 	}
 	if _, err := readManagedUnit(explicit); err != nil {
 		t.Fatalf("explicit unit should validate: %v", err)
 	}
-	legacy := Unit("/var/lib/webfleet", "127.0.0.1:8090")
+	legacy := Unit("/var/lib/webfleet", "127.0.0.1:8090", "")
 	if !strings.Contains(legacy, "# webfleet-listen-mode: bootstrap") {
 		t.Fatalf("legacy unit missing bootstrap mode marker:\n%s", legacy)
 	}
@@ -2586,7 +2586,7 @@ func TestOldUnitWithoutMarkerDefaultsToBootstrap(t *testing.T) {
 }
 
 func TestUnitExplicitRecordsHostPortInExecStart(t *testing.T) {
-	u := UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7336")
+	u := UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7336", "")
 	if !strings.Contains(u, `"--host" "127.0.0.1" "--port" "7336"`) {
 		t.Fatalf("explicit unit must record --host/--port in ExecStart:\n%s", u)
 	}
@@ -2606,7 +2606,7 @@ func TestUnitExplicitRecordsHostPortInExecStart(t *testing.T) {
 		t.Fatalf("explicit unit must not disable the start limiter:\n%s", u)
 	}
 	// IPv6 hosts are bracketed in the metadata and ExecStart.
-	u6 := UnitExplicit("/var/lib/webfleet", "::1", "7336")
+	u6 := UnitExplicit("/var/lib/webfleet", "::1", "7336", "")
 	if !strings.Contains(u6, "# webfleet-listen: [::1]:7336") {
 		t.Fatalf("explicit IPv6 unit must bracket the host:\n%s", u6)
 	}
@@ -2622,7 +2622,7 @@ func TestInstallExplicitWritesExplicitUnit(t *testing.T) {
 	r.script["systemctl daemon-reload"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl start webfleet.service"] = fakeResult{}
-	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7336"); e != nil {
+	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7336", ""); e != nil {
 		t.Fatal(e)
 	}
 	b, _ := os.ReadFile(UnitPath)
@@ -2638,7 +2638,7 @@ func TestInstallExplicitWritesExplicitUnit(t *testing.T) {
 	r.script["systemctl disable webfleet.service"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl restart webfleet.service"] = fakeResult{}
-	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7402"); e != nil {
+	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7402", ""); e != nil {
 		t.Fatal(e)
 	}
 	b2, _ := os.ReadFile(UnitPath)
@@ -2660,7 +2660,7 @@ func TestInstallBootstrapWritesBootstrapUnit(t *testing.T) {
 	r.script["systemctl daemon-reload"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl start webfleet.service"] = fakeResult{}
-	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090"); e != nil {
+	if e := Install(exe, "/var/lib/webfleet", "127.0.0.1:8090", ""); e != nil {
 		t.Fatal(e)
 	}
 	b, _ := os.ReadFile(UnitPath)
@@ -2686,7 +2686,7 @@ func TestReinstallExplicitPreservesExactPriorState(t *testing.T) {
 	r.script["systemctl daemon-reload"] = fakeResult{}
 	r.script["systemctl enable webfleet.service"] = fakeResult{}
 	r.script["systemctl start webfleet.service"] = fakeResult{}
-	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7336"); e != nil {
+	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7336", ""); e != nil {
 		t.Fatal(e)
 	}
 	priorUnit, _ := os.ReadFile(UnitPath)
@@ -2696,7 +2696,7 @@ func TestReinstallExplicitPreservesExactPriorState(t *testing.T) {
 	r.seq["systemctl disable webfleet.service"] = []fakeResult{{}, {}, {}}
 	r.script["systemctl restart webfleet.service"] = fakeResult{}
 	r.script["systemctl stop webfleet.service"] = fakeResult{}
-	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7402"); e == nil {
+	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7402", ""); e == nil {
 		t.Fatal("failed explicit reinstall returned nil")
 	}
 	got, _ := os.ReadFile(UnitPath)
@@ -2714,7 +2714,7 @@ func TestStatusUsesExplicitUnitListener(t *testing.T) {
 	h := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
 	defer h.Close()
 	host, port := splitHostPort(t, strings.TrimPrefix(h.URL, "http://"))
-	os.WriteFile(UnitPath, []byte(UnitExplicit("/var/lib/webfleet", host, port)), 0o644)
+	os.WriteFile(UnitPath, []byte(UnitExplicit("/var/lib/webfleet", host, port, "")), 0o644)
 	var buf bytes.Buffer
 	if e := Status(&buf); e != nil {
 		t.Fatal(e)
@@ -2735,7 +2735,7 @@ func TestStatusUsesBootstrapUnitListener(t *testing.T) {
 	h := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) }))
 	defer h.Close()
 	listen := strings.TrimPrefix(h.URL, "http://")
-	os.WriteFile(UnitPath, []byte(Unit("/var/lib/webfleet", listen)), 0o644)
+	os.WriteFile(UnitPath, []byte(Unit("/var/lib/webfleet", listen, "")), 0o644)
 	var buf bytes.Buffer
 	if e := Status(&buf); e != nil {
 		t.Fatal(e)
@@ -2763,7 +2763,7 @@ func TestBareReinstallLifecyclePreservesNonDefaultPort(t *testing.T) {
 	r.script["systemctl start webfleet.service"] = fakeResult{}
 	exe := BinaryPath
 	// Fresh explicit install on a non-default port.
-	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7406"); e != nil {
+	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7406", ""); e != nil {
 		t.Fatal(e)
 	}
 	body, _ := os.ReadFile(UnitPath)
@@ -2787,7 +2787,7 @@ func TestBareReinstallLifecyclePreservesNonDefaultPort(t *testing.T) {
 	// on the non-default port.
 	setState(r, "enabled", "active")
 	r.calls = nil
-	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7406"); e != nil {
+	if e := InstallExplicit(exe, "/var/lib/webfleet", "127.0.0.1", "7406", ""); e != nil {
 		t.Fatalf("preserving reinstall: %v", e)
 	}
 	after, _ := os.ReadFile(UnitPath)
@@ -2797,5 +2797,30 @@ func TestBareReinstallLifecyclePreservesNonDefaultPort(t *testing.T) {
 	meta2, _ := readManagedUnit(string(after))
 	if got := effectiveListen(meta2); got != "127.0.0.1:7406" {
 		t.Fatalf("post-reinstall effective listener = %q, want 127.0.0.1:7406", got)
+	}
+}
+
+func TestUnitEnvFileRenderedAndParsed(t *testing.T) {
+	u := UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7336", "/etc/webfleet/webfleet.env")
+	if !strings.Contains(u, "EnvironmentFile="+systemdQuote("/etc/webfleet/webfleet.env")) {
+		t.Fatalf("unit missing EnvironmentFile directive:\n%s", u)
+	}
+	if !strings.Contains(u, "# webfleet-envfile: /etc/webfleet/webfleet.env") {
+		t.Fatalf("unit missing envfile metadata:\n%s", u)
+	}
+	meta, err := readManagedUnit(u)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta.envfile != "/etc/webfleet/webfleet.env" {
+		t.Fatalf("parsed envfile=%q, want /etc/webfleet/webfleet.env", meta.envfile)
+	}
+	// No envfile: no EnvironmentFile directive, unit still valid.
+	plain := UnitExplicit("/var/lib/webfleet", "127.0.0.1", "7336", "")
+	if strings.Contains(plain, "EnvironmentFile=") {
+		t.Fatal("unit without envfile unexpectedly has EnvironmentFile")
+	}
+	if _, err := readManagedUnit(plain); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -41,10 +41,14 @@ capabilities and reject replay. Only use it on a network you trust.
 
 ```sh
 # Example: three-node cluster on a trusted private network
-export WEBFLEET_REPLICATION_LISTEN=192.168.1.11:7343
-export WEBFLEET_REPLICATION_INSECURE_PLAINTEXT=1
+# the replication environment is carried into the service unit via --env-file
+cat > /etc/webfleet/webfleet.env <<'EOF'
+WEBFLEET_REPLICATION_LISTEN=192.168.1.11:7343
+WEBFLEET_REPLICATION_INSECURE_PLAINTEXT=1
+EOF
+webfleet service install --host 192.168.1.11 --port 7336 --env-file /etc/webfleet/webfleet.env
 webfleet cluster init --endpoint http://192.168.1.11:7336
-# on each peer
+# on each peer (with its own env file)
 webfleet cluster join --url http://192.168.1.12:7336 --token-file ./token
 ```
 

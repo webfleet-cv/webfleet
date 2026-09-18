@@ -16,7 +16,7 @@ func useInstalledResetDir(t *testing.T, dir string) {
 	t.Helper()
 	oldUnit := service.UnitPath
 	unit := filepath.Join(t.TempDir(), "webfleet.service")
-	if err := os.WriteFile(unit, []byte(service.Unit(dir, "127.0.0.1:7336")), 0600); err != nil {
+	if err := os.WriteFile(unit, []byte(service.Unit(dir, "127.0.0.1:7336", "")), 0600); err != nil {
 		t.Fatal(err)
 	}
 	service.UnitPath = unit
