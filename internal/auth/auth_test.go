@@ -137,3 +137,21 @@ func TestConcurrentFirstAdminRaceGuard(t *testing.T) {
 		t.Fatalf("expected exactly one user, got %d", rows[0]["n"].Int64)
 	}
 }
+
+func TestLoginWorksByUsernameOrEmail(t *testing.T) {
+	st, e := store.Open(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer st.Close()
+	a := New(st)
+	if e = a.CreateAdmin("admin", "admin@example.com", "secret7"); e != nil {
+		t.Fatal(e)
+	}
+	if _, _, e = a.Login("admin", "secret7"); e != nil {
+		t.Fatalf("login by username failed: %v", e)
+	}
+	if _, _, e = a.Login("admin@example.com", "secret7"); e != nil {
+		t.Fatalf("login by email failed: %v", e)
+	}
+}

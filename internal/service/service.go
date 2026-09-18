@@ -1079,6 +1079,28 @@ func effectiveListen(meta unitMeta) string {
 	return meta.listen
 }
 
+// InstalledDataDir returns the data directory recorded by the managed service unit.
+// The boolean is false when the service is not installed. A present but invalid
+// unit is an error so destructive CLI operations never fall back to another path.
+func InstalledDataDir() (string, bool, error) {
+	body, err := os.ReadFile(UnitPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, fmt.Errorf("cannot use installed service configuration: %w", err)
+	}
+	meta, err := readManagedUnit(string(body))
+	if err != nil {
+		return "", false, fmt.Errorf("cannot use installed service configuration: %w", err)
+	}
+	dataDir := meta.data
+	if dataDir == "" {
+		dataDir = DefaultDataDir
+	}
+	return dataDir, true, nil
+}
+
 // Status reports the resolved service state, pid, data/listen configuration and
 // a live health check. It is read-only and does not require root.
 func Status(out io.Writer) error {

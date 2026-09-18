@@ -95,7 +95,7 @@ func (s *Service) PendingJoins(ctx context.Context) ([]JoinRequest, error) {
 	defer rows.Close()
 	var out []JoinRequest
 	for rows.Next() {
-		v, err := scanTrestleJoin(rows)
+		v, err := scanJoin(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -104,7 +104,7 @@ func (s *Service) PendingJoins(ctx context.Context) ([]JoinRequest, error) {
 	return out, rows.Err()
 }
 
-func scanTrestleJoin(scanner interface{ Scan(...any) error }) (JoinRequest, error) {
+func scanJoin(scanner interface{ Scan(...any) error }) (JoinRequest, error) {
 	var v JoinRequest
 	var pub []byte
 	var caps, expires, created string

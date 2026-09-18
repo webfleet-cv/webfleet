@@ -22,7 +22,7 @@
       <p class="form-error" id="db-error" role="alert"></p>
     </div>
     <div id="restart-stage" class="restart-notice" hidden><strong>Restart required</strong><span>PostgreSQL is configured. Restart Web Fleet, then reload this page to create the administrator account.</span><button type="button" class="secondary" id="db-reload">Reload</button></div>
-    <form id="auth-form" hidden><label id="username-field" hidden>Username<input id="username" type="text" autocomplete="username"></label><label id="email-field">Email<input id="email" type="text" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" minlength="7" required></label><button type="submit" id="auth-submit">Continue</button><p class="form-error" id="auth-error" role="alert"></p></form></section>
+    <form id="auth-form" hidden><label id="username-field" hidden>Username<input id="username" type="text" autocomplete="username"></label><label id="email-field">Email<input id="email" type="text" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" minlength="7" required></label><label id="confirm-field" hidden>Confirm password<input id="password-confirm" type="password" minlength="7" autocomplete="new-password" required></label><button type="submit" id="auth-submit">Continue</button><p class="form-error" id="auth-error" role="alert"></p></form></section>
   </main>
   <div id="dashboard" class="dashboard" hidden>
     <button id="mobile-nav" class="mobile-nav" aria-expanded="false" aria-controls="primary-rail">Menu</button><aside class="rail" id="primary-rail">

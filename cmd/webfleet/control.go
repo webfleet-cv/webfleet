@@ -13,8 +13,31 @@ import (
 
 	"github.com/webfleet-cv/webfleet/internal/auth"
 	"github.com/webfleet-cv/webfleet/internal/config"
+	"github.com/webfleet-cv/webfleet/internal/service"
 	"github.com/webfleet-cv/webfleet/internal/store"
 )
+
+// withInstalledDataDir applies the canonical instance-resolution precedence
+// shared by setup/config/reset: WEBFLEET_DATA_DIR wins, then the data directory
+// recorded by the installed managed service, then the normal default. The
+// installed directory is injected through the environment because config.Load
+// already honors WEBFLEET_DATA_DIR; the returned cleanup restores the
+// environment. It fails closed rather than silently targeting a different
+// instance when the installed unit exists but cannot be used safely.
+func withInstalledDataDir() (func(), error) {
+	if strings.TrimSpace(os.Getenv("WEBFLEET_DATA_DIR")) != "" {
+		return func() {}, nil
+	}
+	installedData, installed, installedErr := service.InstalledDataDir()
+	if installedErr != nil {
+		return nil, installedErr
+	}
+	if !installed {
+		return func() {}, nil
+	}
+	_ = os.Setenv("WEBFLEET_DATA_DIR", installedData)
+	return func() { _ = os.Unsetenv("WEBFLEET_DATA_DIR") }, nil
+}
 
 func runSetup(args []string) int {
 	fs := flag.NewFlagSet("webfleet setup", flag.ContinueOnError)
@@ -44,6 +67,12 @@ func runSetup(args []string) int {
 		fmt.Fprintln(os.Stderr, "webfleet:", err)
 		return 1
 	}
+	cleanup, err := withInstalledDataDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "webfleet:", err)
+		return 1
+	}
+	defer cleanup()
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "webfleet:", err)
@@ -76,6 +105,12 @@ func runConfig(args []string) int {
 		fmt.Fprintln(os.Stderr, "usage: webfleet config show [--json]")
 		return 2
 	}
+	cleanup, err := withInstalledDataDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "webfleet:", err)
+		return 1
+	}
+	defer cleanup()
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "webfleet:", err)
@@ -100,6 +135,12 @@ func runReset(args []string) int {
 		fmt.Fprintln(os.Stderr, "usage: webfleet reset (--auth|--all) [--confirm 'WEBFLEET AUTH|WEBFLEET ALL']")
 		return 2
 	}
+	cleanup, err := withInstalledDataDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "webfleet:", err)
+		return 1
+	}
+	defer cleanup()
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "webfleet:", err)
