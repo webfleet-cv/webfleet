@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -18,10 +17,11 @@ import (
 )
 
 type Transport struct {
-	db       *database.DB
-	identity *Service
-	client   *http.Client
-	now      func() time.Time
+	db                *database.DB
+	identity          *Service
+	client            *http.Client
+	now               func() time.Time
+	insecurePlaintext bool
 }
 
 func NewTransport(db *database.DB, identity *Service, client *http.Client) *Transport {
@@ -30,6 +30,10 @@ func NewTransport(db *database.DB, identity *Service, client *http.Client) *Tran
 	}
 	return &Transport{db: db, identity: identity, client: client, now: time.Now}
 }
+
+// SetInsecurePlaintext permits HTTP peer endpoints when the operator has
+// explicitly enabled plaintext transport for a trusted private network.
+func (t *Transport) SetInsecurePlaintext(v bool) { t.insecurePlaintext = v }
 func (t *Transport) Authenticate(r *http.Request, capability string) ([]byte, string, error) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, core.MaxRequestBytes+1))
 	if err != nil || int64(len(body)) > core.MaxRequestBytes {
@@ -88,9 +92,8 @@ func (t *Transport) Do(ctx context.Context, nodeID, method, path, capability str
 	if state != core.MemberActive || protocol != core.ProtocolVersion {
 		return nil, errors.New("cluster member unavailable or incompatible")
 	}
-	u, err := url.Parse(endpoint)
-	if err != nil || u.Scheme != "https" || u.Host == "" {
-		return nil, errors.New("cluster endpoint must use https")
+	if err := validateEndpointScheme(endpoint, t.insecurePlaintext); err != nil {
+		return nil, err
 	}
 	if !strings.HasPrefix(path, "/") {
 		path = "/" + path

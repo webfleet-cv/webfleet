@@ -226,7 +226,9 @@ func New(cfg config.Config, st *store.Store, log *slog.Logger) *Server {
 	a := analytics.NewWithOptions(st, analytics.Options{AllowNoOrigin: cfg.AnalyticsServerSide})
 	s := &Server{cfg: cfg, store: st, analytics: a, tokens: apitokens.New(st), audit: audit.NewWithOptions(st, audit.Options{Sandbox: cfg.AuditSandbox}), auth: auth.New(st), sites: sites.New(st), monitor: monitor.New(st), maintenance: maintenance.New(st), rbac: rbac.New(st), incidents: incidents.New(st), tls: tlshealth.New(st), dns: dnsobs.New(st), deployments: deployments.New(st), crawler: crawler.New(st), geo: geo.NewManager(cfg.DataDir, cfg.GeoIPURL), log: log, mux: http.NewServeMux(), proxy: requestmeta.Config{Trusted: cfg.TrustedProxies}, loginLim: newRateLimiter(time.Minute, 10, 10000), setupLim: newRateLimiter(time.Minute, 5, 1000), tokenLim: newRateLimiter(time.Minute, 20, 10000), passwordLim: newRateLimiter(time.Minute, 10, 10000)}
 	s.cluster = clusterapi.New(st.DB)
+	s.cluster.SetInsecurePlaintext(cfg.Replication.InsecurePlaintext)
 	s.clusterTransport = clusterapi.NewTransport(st.DB, s.cluster, nil)
+	s.clusterTransport.SetInsecurePlaintext(cfg.Replication.InsecurePlaintext)
 	propagationAdapter := productprop.New(st)
 	if cfg.Replication.Enabled {
 		propagationAdapter = productprop.NewReplicated(st)

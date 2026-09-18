@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -23,11 +24,41 @@ const ProtocolVersion = core.ProtocolVersion
 var DefaultCapabilities = []string{"cluster.health", "cluster.webfleet.summary", "cluster.webfleet.compare", "cluster.propagation", "replication"}
 
 type Service struct {
-	db  *database.DB
-	now func() time.Time
+	db                *database.DB
+	now               func() time.Time
+	insecurePlaintext bool
 }
 
 func New(db *database.DB) *Service { return &Service{db: db, now: time.Now} }
+
+// SetInsecurePlaintext permits HTTP cluster endpoints when the operator has
+// explicitly enabled plaintext transport for a trusted private network. It
+// affects only transport confidentiality; HMAC authentication, capability
+// checks and nonce/replay protection remain enabled.
+func (s *Service) SetInsecurePlaintext(v bool) { s.insecurePlaintext = v }
+
+// validateEndpointScheme permits HTTPS always; HTTP only when insecure
+// plaintext transport has been explicitly enabled.
+func validateEndpointScheme(endpoint string, insecure bool) error {
+	if strings.TrimSpace(endpoint) == "" {
+		return nil
+	}
+	u, err := url.Parse(endpoint)
+	if err != nil || u.Host == "" {
+		return errors.New("invalid cluster endpoint")
+	}
+	switch u.Scheme {
+	case "https":
+		return nil
+	case "http":
+		if insecure {
+			return nil
+		}
+		return errors.New("cluster endpoint must use https unless insecure plaintext transport is explicitly enabled")
+	default:
+		return errors.New("cluster endpoint must use https")
+	}
+}
 
 type Member struct {
 	core.Identity
@@ -97,8 +128,8 @@ func (s *Service) EnsureIdentity(ctx context.Context, productVersion string) (co
 	return canonical, nil
 }
 func (s *Service) UpdateIdentity(ctx context.Context, name, endpoint, version string) (core.Identity, error) {
-	if endpoint != "" && !strings.HasPrefix(endpoint, "https://") {
-		return core.Identity{}, errors.New("cluster public endpoint must use https")
+	if err := validateEndpointScheme(endpoint, s.insecurePlaintext); err != nil {
+		return core.Identity{}, err
 	}
 	if _, err := s.EnsureIdentity(ctx, version); err != nil {
 		return core.Identity{}, err

@@ -29,7 +29,10 @@ func openClusterService() (*store.Store, *clusterapi.Service, *clusterapi.Transp
 		return nil, nil, nil, err
 	}
 	svc := clusterapi.New(st.DB)
-	return st, svc, clusterapi.NewTransport(st.DB, svc, nil), nil
+	svc.SetInsecurePlaintext(cfg.Replication.InsecurePlaintext)
+	transport := clusterapi.NewTransport(st.DB, svc, nil)
+	transport.SetInsecurePlaintext(cfg.Replication.InsecurePlaintext)
+	return st, svc, transport, nil
 }
 
 func runCluster(args []string) int {
@@ -70,7 +73,7 @@ func runCluster(args []string) int {
 		return wfClusterPrint(inv, e, *jsonOut)
 	case "join":
 		fs := flag.NewFlagSet("cluster join", flag.ContinueOnError)
-		remote := fs.String("url", "", "remote Webfleet HTTPS URL")
+		remote := fs.String("url", "", "remote Webfleet HTTPS URL (HTTP only when WEBFLEET_REPLICATION_INSECURE_PLAINTEXT is enabled for a trusted private network; disables TLS confidentiality)")
 		tokenFile := fs.String("token-file", "", "invitation token file")
 		if fs.Parse(args[1:]) != nil || *remote == "" || *tokenFile == "" {
 			fmt.Fprintln(os.Stderr, "usage: webfleet cluster join --url URL --token-file FILE")
