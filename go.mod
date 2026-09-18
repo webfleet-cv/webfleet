@@ -6,7 +6,7 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20240202021202-6d0b6a386732
 	github.com/chromedp/chromedp v0.9.5
 	github.com/coreos/go-oidc/v3 v3.11.0
-	github.com/gantry-tools/gantry-core v0.4.2
+	github.com/gantry-tools/gantry-core v0.4.3-0.20260918094353-6b6b1f417935
 	github.com/hashicorp/raft v1.7.3
 	github.com/jackc/pgx/v5 v5.7.2
 	golang.org/x/sys v0.45.0
