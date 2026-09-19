@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/webfleet-cv/webfleet/internal/auth"
@@ -164,6 +165,10 @@ func runReset(args []string) int {
 		if _, err = os.Stat(cfg.DataDir); os.IsNotExist(err) {
 			return 0
 		}
+		info, statErr := os.Stat(cfg.DataDir)
+		if statErr != nil {
+			return 1
+		}
 		if err = os.Rename(cfg.DataDir, cfg.DataDir+".reset-"+stamp); err != nil {
 			fmt.Fprintln(os.Stderr, "webfleet: back up data directory:", err)
 			return 1
@@ -171,6 +176,16 @@ func runReset(args []string) int {
 		if err = os.MkdirAll(cfg.DataDir, 0700); err != nil {
 			fmt.Fprintln(os.Stderr, "webfleet:", err)
 			return 1
+		}
+		// The installed service runs as the dedicated service user. Preserve
+		// the original owner on the recreated directory (the pre-reset state
+		// was writable by the service), otherwise the service cannot open or
+		// secure its database after reset --all.
+		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+			if err = os.Chown(cfg.DataDir, int(stat.Uid), int(stat.Gid)); err != nil {
+				fmt.Fprintln(os.Stderr, "webfleet: preserve data directory ownership:", err)
+				return 1
+			}
 		}
 	} else {
 		db, openErr := store.Open(cfg.DataDir)
