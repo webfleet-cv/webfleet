@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/webfleet-cv/webfleet/internal/auth"
@@ -181,11 +180,9 @@ func runReset(args []string) int {
 		// the original owner on the recreated directory (the pre-reset state
 		// was writable by the service), otherwise the service cannot open or
 		// secure its database after reset --all.
-		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-			if err = os.Chown(cfg.DataDir, int(stat.Uid), int(stat.Gid)); err != nil {
-				fmt.Fprintln(os.Stderr, "webfleet: preserve data directory ownership:", err)
-				return 1
-			}
+		if err = preserveResetDirOwner(cfg.DataDir, info); err != nil {
+			fmt.Fprintln(os.Stderr, "webfleet: preserve data directory ownership:", err)
+			return 1
 		}
 	} else {
 		db, openErr := store.Open(cfg.DataDir)
