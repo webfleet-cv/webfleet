@@ -137,3 +137,37 @@ func TestRedirectAndHeaderObservation(t *testing.T) {
 		t.Fatal("missing observed CSP")
 	}
 }
+
+func TestGuardBlockedCheckKeepsSiteID(t *testing.T) {
+	st, id := setupSite(t, "https://blocked.example/")
+	defer st.Close()
+	svc := NewForTests(st, fakeResolver{"blocked.example": {}}, false)
+	res, e := svc.CheckSite(context.Background(), id)
+	if e != nil {
+		t.Fatalf("CheckSite returned error on guard-blocked URL: %v", e)
+	}
+	if res.SiteID != id {
+		t.Fatalf("guard-blocked result SiteID=%d want %d", res.SiteID, id)
+	}
+	if res.MonitorID == 0 {
+		t.Fatal("guard-blocked result MonitorID=0")
+	}
+	if res.ErrorClass != "blocked" {
+		t.Fatalf("ErrorClass=%q want blocked", res.ErrorClass)
+	}
+	// The health transition must target the real site, never site_id 0, which
+	// does not exist and would trip the sites() foreign key.
+	var count int64
+	if e := st.DB.QueryRow(`SELECT COUNT(*) FROM site_health WHERE site_id=?`, id).Scan(&count); e != nil {
+		t.Fatal(e)
+	}
+	if count != 1 {
+		t.Fatalf("site_health rows=%d want 1 for site %d", count, id)
+	}
+	if e := st.DB.QueryRow(`SELECT COUNT(*) FROM site_health WHERE site_id=0`).Scan(&count); e != nil {
+		t.Fatal(e)
+	}
+	if count != 0 {
+		t.Fatalf("site_health row with site_id=0 created (%d)", count)
+	}
+}

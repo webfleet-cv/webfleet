@@ -86,7 +86,7 @@ func (s *Service) check(ctx context.Context, siteID, monitorID int64, raw string
 		return Result{}, e
 	}
 	if e = s.guard.ValidateURL(ctx, u); e != nil {
-		return s.persist(siteID, monitorID, Result{OK: false, FinalURL: raw, ErrorClass: "blocked", Error: e.Error(), CheckedAt: store.Now()})
+		return s.persist(siteID, monitorID, Result{SiteID: siteID, MonitorID: monitorID, OK: false, FinalURL: raw, ErrorClass: "blocked", Error: e.Error(), CheckedAt: store.Now()})
 	}
 	start := time.Now()
 	req, e := http.NewRequestWithContext(ctx, http.MethodGet, raw, nil)
